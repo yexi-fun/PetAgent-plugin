@@ -1,0 +1,12 @@
+{
+  "servers": [
+    {
+      "name": "echo",
+      "transport": "stdio",
+      "command": "runtime/windows-x64/echo-mcp.exe",
+      "args": [],
+      "env": {},
+      "prefix": "echo__"
+    }
+  ]
+}

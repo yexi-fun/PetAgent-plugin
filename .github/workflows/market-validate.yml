@@ -1,0 +1,29 @@
+name: market-validate
+
+on:
+  pull_request:
+    paths: ["market/**", "plugins/**", "scripts/**"]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build example plugin
+        working-directory: plugins/com.example.echo/src
+        run: cargo build --release --target x86_64-pc-windows-msvc
+      - name: Validate metadata and archives
+        shell: pwsh
+        run: ./scripts/validate-market.ps1
+      - name: Scan archives
+        shell: pwsh
+        run: |
+          Get-ChildItem artifacts -Recurse -Filter *.zip -ErrorAction SilentlyContinue | ForEach-Object {
+            Start-MpScan -ScanType CustomScan -ScanPath $_.FullName
+          }

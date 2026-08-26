@@ -1,0 +1,12 @@
+dist/
+build/
+target/
+artifacts/
+*.zip
+.env
+*.key
+*.pem
+*.pfx
+.pytest_cache/
+__pycache__/
+.DS_Store

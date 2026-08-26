@@ -1,0 +1,37 @@
+name: market-release
+
+on:
+  push:
+    tags: ["market-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    environment: market-release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify release secrets exist
+        shell: pwsh
+        env:
+          MARKET_SIGNING_KEY: ${{ secrets.MARKET_SIGNING_KEY }}
+          PLUGIN_SIGNING_KEY: ${{ secrets.PLUGIN_SIGNING_KEY }}
+          MARKET_SIGNER_PATH: ${{ secrets.MARKET_SIGNER_PATH }}
+        run: |
+          if (-not $env:MARKET_SIGNING_KEY -or -not $env:PLUGIN_SIGNING_KEY -or -not $env:MARKET_SIGNER_PATH) { throw "Protected signing secrets and signer path are required." }
+      - name: Build and stage plugin package
+        shell: pwsh
+        run: ./scripts/package-plugin.ps1 -PluginId com.example.echo -Release
+      - name: Validate staged package
+        shell: pwsh
+        run: ./scripts/validate-market.ps1
+      - name: Generate signed index and publish Release
+        shell: pwsh
+        env:
+          MARKET_SIGNING_KEY: ${{ secrets.MARKET_SIGNING_KEY }}
+          PLUGIN_SIGNING_KEY: ${{ secrets.PLUGIN_SIGNING_KEY }}
+          MARKET_SIGNER_PATH: ${{ secrets.MARKET_SIGNER_PATH }}
+        run: ./scripts/publish-market.ps1 -Tag $env:GITHUB_REF_NAME

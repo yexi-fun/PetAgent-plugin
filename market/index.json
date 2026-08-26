@@ -1,0 +1,10 @@
+{
+  "index": {
+    "schemaVersion": 1,
+    "repository": "yexi-fun/PetAgent-plugin",
+    "generatedAt": "1970-01-01T00:00:00Z",
+    "plugins": []
+  },
+  "signingKeyId": "market-key-2026-01",
+  "signature": "GENERATED_BY_PROTECTED_RELEASE_WORKFLOW"
+}
