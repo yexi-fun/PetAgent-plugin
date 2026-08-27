@@ -22,16 +22,20 @@ Copy-Item -LiteralPath (Join-Path $pluginRoot "config.schema.json") -Destination
 if ($manifest.type -eq "mcp") {
     New-Item -ItemType Directory -Force (Join-Path $payload "runtime") | Out-Null
     Copy-Item -LiteralPath (Join-Path $pluginRoot "runtime\mcp.json") -Destination (Join-Path $payload "runtime")
-    $binary = Join-Path $pluginRoot "runtime\windows-x64\echo-mcp.exe"
-    if (-not (Test-Path $binary)) {
-        New-Item -ItemType Directory -Force (Split-Path -Parent $binary) | Out-Null
-        Push-Location (Join-Path $pluginRoot "src")
-        cargo build --release --target x86_64-pc-windows-msvc
-        Pop-Location
-        $built = Join-Path $pluginRoot "src\target\x86_64-pc-windows-msvc\release\echo-mcp.exe"
-        if (Test-Path $built) { Copy-Item $built $binary }
+    $mcpConfig = Get-Content -Raw -LiteralPath (Join-Path $pluginRoot "runtime\mcp.json") | ConvertFrom-Json
+    [array]$servers = if ($mcpConfig.servers) { $mcpConfig.servers } else { $mcpConfig }
+    if ($servers.Count -ne 1 -or $servers[0].transport -ne "stdio" -or -not $servers[0].command) {
+        throw "MCP packaging currently requires exactly one stdio server with a command."
     }
-    if (-not (Test-Path $binary)) { throw "Missing runtime binary: build echo-mcp.exe before packaging." }
+    $command = [string]$servers[0].command
+    $binaryName = [IO.Path]::GetFileName($command)
+    $binary = Join-Path $pluginRoot ($command -replace '/', '\')
+    New-Item -ItemType Directory -Force (Split-Path -Parent $binary) | Out-Null
+    Push-Location (Join-Path $pluginRoot "src")
+    try { cargo build --release --target x86_64-pc-windows-msvc } finally { Pop-Location }
+    $built = Join-Path $pluginRoot "src\target\x86_64-pc-windows-msvc\release\$binaryName"
+    if (Test-Path $built) { Copy-Item $built $binary -Force }
+    if (-not (Test-Path $binary)) { throw "Missing runtime binary: build $binaryName before packaging." }
     New-Item -ItemType Directory -Force (Join-Path $payload "runtime\windows-x64") | Out-Null
     Copy-Item -LiteralPath $binary -Destination (Join-Path $payload "runtime\windows-x64") -Force
 } elseif ($manifest.type -eq "frontend") {

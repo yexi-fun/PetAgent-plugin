@@ -1,0 +1,11 @@
+{
+  "servers": [
+    {
+      "name": "disk",
+      "transport": "stdio",
+      "command": "runtime/windows-x64/disk-usage-mcp.exe",
+      "args": [],
+      "env": {}
+    }
+  ]
+}
