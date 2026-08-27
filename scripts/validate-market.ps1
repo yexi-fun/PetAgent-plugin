@@ -27,6 +27,13 @@ foreach ($manifestPath in Get-ChildItem -LiteralPath (Join-Path $root "plugins")
     if ($manifest.schemaVersion -ne 1 -or $manifest.apiVersion -ne 1) { throw "Unsupported manifest version: $($manifestPath.FullName)" }
     if ($manifest.id -notmatch '^[a-z0-9]+(?:[.-][a-z0-9]+)+$') { throw "Invalid plugin id: $($manifest.id)" }
     if ($manifest.type -ne $manifest.entry.kind) { throw "type and entry.kind differ: $($manifest.id)" }
+    if ($manifest.type -eq "native-dll") {
+        if ($manifest.entry.library -notmatch '\.dll$' -or $manifest.entry.abiVersion -ne 1 -or $manifest.entry.serviceName -ne "tools" -or $manifest.entry.serviceApiVersion -ne 1) { throw "Invalid native ABI entry: $($manifest.id)" }
+        if ($manifest.permissions | Where-Object { $_ -in @("network", "filesystem-read", "filesystem-write", "shell") }) { throw "Native plugin requests forbidden permissions: $($manifest.id)" }
+    }
+    if ($manifest.type -eq "frontend") {
+        if (-not $manifest.entry.frontend.root -or -not $manifest.entry.frontend.index -or $manifest.entry.frontend.index -notlike "$($manifest.entry.frontend.root)/*") { throw "Invalid frontend entry: $($manifest.id)" }
+    }
     foreach ($field in @("config", "executable", "library", "configSchema")) {
         $value = $manifest.entry.$field
         if ($null -eq $value) { $value = $manifest.$field }

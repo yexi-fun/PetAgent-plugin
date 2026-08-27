@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "com.example.native-probe",
+  "name": "Native Probe",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "petAgent": ">=0.1.0 <0.2.0",
+  "type": "native-dll",
+  "description": "A signed native ABI v1 tools sample.",
+  "entry": {
+    "kind": "native-dll",
+    "library": "runtime/windows-x64/native-probe.dll",
+    "abiVersion": 1,
+    "serviceName": "tools",
+    "serviceApiVersion": 1
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "permissions": [],
+  "targets": ["windows-x64"],
+  "configSchema": "config.schema.json",
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": "GENERATED_BY_PROTECTED_RELEASE_WORKFLOW_0000000000000000000000000000000000000000",
+  "signingKeyId": "publisher-key-com-example-2026-01"
+}

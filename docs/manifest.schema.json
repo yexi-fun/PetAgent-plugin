@@ -23,8 +23,18 @@
         "config": { "$ref": "#/$defs/relativePath" },
         "executable": { "$ref": "#/$defs/relativePath" },
         "library": { "$ref": "#/$defs/relativePath" },
+        "abiVersion": { "type": "integer", "minimum": 1 },
         "serviceName": { "type": "string" },
-        "serviceApiVersion": { "type": "integer", "minimum": 1 }
+        "serviceApiVersion": { "type": "integer", "minimum": 1 },
+        "frontend": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["root", "index"],
+          "properties": {
+            "root": { "$ref": "#/$defs/relativePath" },
+            "index": { "$ref": "#/$defs/relativePath" }
+          }
+        }
       }
     },
     "dependencies": { "type": "array", "uniqueItems": true, "items": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "type": "string" }, "version": { "type": "string" } } } },
@@ -36,6 +46,27 @@
     "signature": { "type": "string", "minLength": 40 },
     "signingKeyId": { "type": "string", "minLength": 1 }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "native-dll" } } },
+      "then": {
+        "properties": {
+          "entry": {
+            "required": ["library", "abiVersion", "serviceName", "serviceApiVersion"],
+            "properties": {
+              "abiVersion": { "const": 1 },
+              "serviceName": { "const": "tools" },
+              "serviceApiVersion": { "const": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "frontend" } } },
+      "then": { "properties": { "entry": { "required": ["frontend"] } } }
+    }
+  ],
   "$defs": {
     "relativePath": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$" }
   }

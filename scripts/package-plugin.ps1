@@ -19,22 +19,37 @@ New-Item -ItemType Directory -Force $payload | Out-Null
 Copy-Item -LiteralPath (Join-Path $pluginRoot "README.md") -Destination $payload
 Copy-Item -LiteralPath (Join-Path $pluginRoot "LICENSE") -Destination $payload
 Copy-Item -LiteralPath (Join-Path $pluginRoot "config.schema.json") -Destination $payload
-New-Item -ItemType Directory -Force (Join-Path $payload "runtime") | Out-Null
-Copy-Item -LiteralPath (Join-Path $pluginRoot "runtime\mcp.json") -Destination (Join-Path $payload "runtime")
-
-$binary = Join-Path $pluginRoot "runtime\windows-x64\echo-mcp.exe"
-if (-not (Test-Path $binary)) {
+if ($manifest.type -eq "mcp") {
+    New-Item -ItemType Directory -Force (Join-Path $payload "runtime") | Out-Null
+    Copy-Item -LiteralPath (Join-Path $pluginRoot "runtime\mcp.json") -Destination (Join-Path $payload "runtime")
+    $binary = Join-Path $pluginRoot "runtime\windows-x64\echo-mcp.exe"
+    if (-not (Test-Path $binary)) {
+        New-Item -ItemType Directory -Force (Split-Path -Parent $binary) | Out-Null
+        Push-Location (Join-Path $pluginRoot "src")
+        cargo build --release --target x86_64-pc-windows-msvc
+        Pop-Location
+        $built = Join-Path $pluginRoot "src\target\x86_64-pc-windows-msvc\release\echo-mcp.exe"
+        if (Test-Path $built) { Copy-Item $built $binary }
+    }
+    if (-not (Test-Path $binary)) { throw "Missing runtime binary: build echo-mcp.exe before packaging." }
+    New-Item -ItemType Directory -Force (Join-Path $payload "runtime\windows-x64") | Out-Null
+    Copy-Item -LiteralPath $binary -Destination (Join-Path $payload "runtime\windows-x64") -Force
+} elseif ($manifest.type -eq "frontend") {
+    Copy-Item -LiteralPath (Join-Path $pluginRoot "dist") -Destination $payload -Recurse -Force
+} elseif ($manifest.type -eq "native-dll") {
+    $binary = Join-Path $pluginRoot "runtime\windows-x64\native-probe.dll"
     New-Item -ItemType Directory -Force (Split-Path -Parent $binary) | Out-Null
     Push-Location (Join-Path $pluginRoot "src")
     cargo build --release --target x86_64-pc-windows-msvc
     Pop-Location
-    $built = Join-Path $pluginRoot "src\target\x86_64-pc-windows-msvc\release\echo-mcp.exe"
-    if (Test-Path $built) { Copy-Item $built $binary }
+    $built = Join-Path $pluginRoot "src\target\x86_64-pc-windows-msvc\release\native_probe.dll"
+    if (Test-Path $built) { Copy-Item $built $binary -Force }
+    if (-not (Test-Path $binary)) { throw "Missing runtime binary: build native-probe.dll before packaging." }
+    New-Item -ItemType Directory -Force (Join-Path $payload "runtime\windows-x64") | Out-Null
+    Copy-Item -LiteralPath $binary -Destination (Join-Path $payload "runtime\windows-x64") -Force
+} else {
+    throw "Unsupported plugin type: $($manifest.type)"
 }
-if (-not (Test-Path $binary)) { throw "Missing runtime binary: build echo-mcp.exe before packaging." }
-
-New-Item -ItemType Directory -Force (Join-Path $payload "runtime\windows-x64") | Out-Null
-Copy-Item -LiteralPath $binary -Destination (Join-Path $payload "runtime\windows-x64") -Force
 # The host resolves this command from the extracted version directory.
 # The reviewed-repository release keeps the deterministic payload digest in the
 # manifest. Signature fields remain descriptive metadata and are not trusted.
