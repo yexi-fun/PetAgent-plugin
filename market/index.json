@@ -2,7 +2,7 @@
     "index":  {
                   "schemaVersion":  1,
                   "repository":  "yexi-fun/PetAgent-plugin",
-                  "generatedAt":  "2026-08-27T04:05:17.8112420Z",
+                  "generatedAt":  "2026-08-27T12:49:41.3066555Z",
                   "plugins":  [
                                   {
                                       "id":  "com.example.echo",
@@ -29,6 +29,35 @@
                                                            "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v1/com.example.echo-0.1.0.zip",
                                                            "sha256":  "bebbceb80c4912e4f433ad3b1712b282129ca3eaf5ad53fd343f16b6965476bc",
                                                            "publishedAt":  "2026-08-27T04:05:17.8042381Z",
+                                                           "revoked":  false
+                                                       }
+                                                   ]
+                                  },
+                                  {
+                                      "id":  "com.petagent.disk-usage",
+                                      "name":  "磁盘占用",
+                                      "description":  "获取系统各磁盘的容量、已用空间、可用空间和占用百分比。",
+                                      "author":  "PetAgent Plugin Team",
+                                      "type":  "mcp",
+                                      "categories":  [
+                                                         "Productivity"
+                                                     ],
+                                      "permissions":  [
+                                                          "filesystem-read"
+                                                      ],
+                                      "dependencies":  [
+
+                                                       ],
+                                      "conflicts":  [
+
+                                                    ],
+                                      "versions":  [
+                                                       {
+                                                           "version":  "0.1.0",
+                                                           "channel":  "stable",
+                                                           "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v1/com.petagent.disk-usage-0.1.0.zip",
+                                                           "sha256":  "41f8ada386e78644ef88fecdc24eb9a852bab133817332b6ea27b2afefeb732b",
+                                                           "publishedAt":  "2026-08-27T12:49:41.3066555Z",
                                                            "revoked":  false
                                                        }
                                                    ]
