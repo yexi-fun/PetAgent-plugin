@@ -2,7 +2,7 @@
     "index":  {
                   "schemaVersion":  1,
                   "repository":  "yexi-fun/PetAgent-plugin",
-                  "generatedAt":  "2026-08-27T13:06:02.8990613Z",
+                  "generatedAt":  "2026-08-27T13:24:00.0000000Z",
                   "plugins":  [
                                   {
                                       "id":  "com.example.echo",
@@ -58,6 +58,35 @@
                                                            "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v1/com.petagent.disk-usage-0.1.1.zip",
                                                            "sha256":  "8901ab9f6b47226544b62bb8eb20fc9b2bf33da08a147b812abc94af60763905",
                                                            "publishedAt":  "2026-08-27T13:06:02.8990613Z",
+                                                           "revoked":  false
+                                                       }
+                                                   ]
+                                  },
+                                  {
+                                      "id":  "com.petagent.hardware-temperature",
+                                      "name":  "硬件温度",
+                                      "description":  "读取 CPU、GPU 和系统热区温度；支持 NVIDIA NVML 及硬件监控软件 WMI 传感器。",
+                                      "author":  "PetAgent Plugin Team",
+                                      "type":  "native-dll",
+                                      "categories":  [
+                                                         "System"
+                                                     ],
+                                      "permissions":  [
+                                                          "filesystem-read"
+                                                      ],
+                                      "dependencies":  [
+
+                                                       ],
+                                      "conflicts":  [
+
+                                                    ],
+                                      "versions":  [
+                                                       {
+                                                           "version":  "0.1.0",
+                                                           "channel":  "stable",
+                                                           "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v1/com.petagent.hardware-temperature-0.1.0.zip",
+                                                           "sha256":  "18b990ca5c963f20162ce961e3f9382dc2bd86a965b3878163e87e035be4de8e",
+                                                           "publishedAt":  "2026-08-27T13:24:00.0000000Z",
                                                            "revoked":  false
                                                        }
                                                    ]
