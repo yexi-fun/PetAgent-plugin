@@ -51,8 +51,8 @@ if ($manifest.type -eq "mcp") {
     throw "Unsupported plugin type: $($manifest.type)"
 }
 # The host resolves this command from the extracted version directory.
-# The reviewed-repository release keeps the deterministic payload digest in the
-# manifest. Signature fields remain descriptive metadata and are not trusted.
+# The reviewed-repository release may keep a deterministic payload digest as
+# informational metadata. Signature fields are not generated or trusted.
 function Get-PayloadSha256([string]$PayloadRoot) {
     $hash = [Security.Cryptography.IncrementalHash]::CreateHash([Security.Cryptography.HashAlgorithmName]::SHA256)
     $utf8 = [Text.Encoding]::UTF8
@@ -77,7 +77,6 @@ function Get-PayloadSha256([string]$PayloadRoot) {
 }
 $payloadHash = Get-PayloadSha256 $payload
 $manifest.sha256 = $payloadHash
-$manifest.signature = "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA"
 $manifestJson = $manifest | ConvertTo-Json -Depth 20
 $manifestPath = Join-Path $payload "manifest.json"
 $utf8NoBom = [Text.UTF8Encoding]::new($false)

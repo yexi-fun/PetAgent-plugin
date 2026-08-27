@@ -21,8 +21,6 @@ foreach ($archive in $archives) {
         name = $manifest.name
         description = $manifest.description
         author = "PetAgent Plugin Team"
-        signingKeyId = $manifest.signingKeyId
-        signingPublicKey = ""
         type = $manifest.type
         categories = @("Productivity")
         permissions = @($manifest.permissions)
@@ -33,8 +31,6 @@ foreach ($archive in $archives) {
             channel = "stable"
             downloadUrl = "https://github.com/$Repository/releases/download/$Tag/$($archive.Name)"
             sha256 = $zipHash
-            signature = "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA"
-            signingKeyId = $manifest.signingKeyId
             publishedAt = (Get-Date).ToUniversalTime().ToString("o")
             revoked = $false
         })
@@ -48,17 +44,12 @@ $index = [pscustomobject]@{
         generatedAt = (Get-Date).ToUniversalTime().ToString("o")
         plugins = $plugins
     }
-    signingKeyId = "unsigned-reviewed-repository"
-    signature = "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA"
 }
 $revocations = [pscustomobject]@{
     revocations = [pscustomobject]@{
         repository = $Repository
-        signingKeyIds = @()
         versions = @()
     }
-    signingKeyId = "unsigned-reviewed-repository"
-    signature = "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA"
 }
 $utf8NoBom = [Text.UTF8Encoding]::new($false)
 [IO.File]::WriteAllText((Join-Path $root "market\index.json"), ($index | ConvertTo-Json -Depth 30), $utf8NoBom)

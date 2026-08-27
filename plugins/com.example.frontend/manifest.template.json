@@ -6,7 +6,7 @@
   "apiVersion": 1,
   "petAgent": ">=0.1.0 <0.2.0",
   "type": "frontend",
-  "description": "A sandboxed frontend plugin sample.",
+  "description": "A trusted frontend plugin sample.",
   "entry": {
     "kind": "frontend",
     "frontend": { "root": "dist", "index": "dist/index.html" }
@@ -16,7 +16,5 @@
   "permissions": ["window"],
   "targets": ["windows-x64"],
   "configSchema": "config.schema.json",
-  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-  "signature": "GENERATED_BY_PROTECTED_RELEASE_WORKFLOW_0000000000000000000000000000000000000000",
-  "signingKeyId": "publisher-key-com-example-2026-01"
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
 }

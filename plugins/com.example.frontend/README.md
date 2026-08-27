@@ -1,4 +1,5 @@
 # Frontend sample
 
-This sample is served from an isolated PetAgent WebView through the `pet-plugin`
-protocol. It has no direct access to Tauri commands or host filesystem paths.
+This sample is served from a PetAgent WebView through the `pet-plugin` protocol.
+Frontend plugins are trusted code and run with the host user's permissions;
+the protocol only maps packaged resources and host lifecycle information.

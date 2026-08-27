@@ -29,7 +29,6 @@ foreach ($manifestPath in Get-ChildItem -LiteralPath (Join-Path $root "plugins")
     if ($manifest.type -ne $manifest.entry.kind) { throw "type and entry.kind differ: $($manifest.id)" }
     if ($manifest.type -eq "native-dll") {
         if ($manifest.entry.library -notmatch '\.dll$' -or $manifest.entry.abiVersion -ne 1 -or $manifest.entry.serviceName -ne "tools" -or $manifest.entry.serviceApiVersion -ne 1) { throw "Invalid native ABI entry: $($manifest.id)" }
-        if ($manifest.permissions | Where-Object { $_ -in @("network", "filesystem-read", "filesystem-write", "shell") }) { throw "Native plugin requests forbidden permissions: $($manifest.id)" }
     }
     if ($manifest.type -eq "frontend") {
         if (-not $manifest.entry.frontend.root -or -not $manifest.entry.frontend.index -or $manifest.entry.frontend.index -notlike "$($manifest.entry.frontend.root)/*") { throw "Invalid frontend entry: $($manifest.id)" }
@@ -41,9 +40,16 @@ foreach ($manifestPath in Get-ChildItem -LiteralPath (Join-Path $root "plugins")
             throw "Unsafe relative path in $($manifest.id): $value"
         }
     }
-    if ($manifest.sha256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "Invalid sha256 field: $($manifest.id)" }
-    if ($manifest.signature.Length -lt 40) { throw "Invalid signature field: $($manifest.id)" }
-    if ($manifest.signature -like 'GENERATED_*') { Write-Warning "Unsigned template (expected before release): $($manifest.id)" }
+    if ($manifest.entry.frontend) {
+        foreach ($field in @("root", "index")) {
+            $value = $manifest.entry.frontend.$field
+            if ($value -and ($value -match '(^|[\\/])\.\.([\\/]|$)' -or [IO.Path]::IsPathRooted($value) -or $value.Contains('\\'))) {
+                throw "Unsafe frontend relative path in $($manifest.id): $value"
+            }
+        }
+    }
+    if ($manifest.sha256 -and $manifest.sha256 -notmatch '^[0-9A-Fa-f]{64}$') { throw "Invalid optional sha256 field: $($manifest.id)" }
+    # Signature and permission fields are descriptive metadata in trusted-code mode.
 }
 
 foreach ($archive in Get-ChildItem -LiteralPath (Join-Path $root "artifacts") -Recurse -Filter *.zip -ErrorAction SilentlyContinue) {

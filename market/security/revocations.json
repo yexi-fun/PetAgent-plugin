@@ -1,13 +1,8 @@
 {
     "revocations":  {
                         "repository":  "yexi-fun/PetAgent-plugin",
-                        "signingKeyIds":  [
-
-                                          ],
                         "versions":  [
 
                                      ]
-                    },
-    "signingKeyId":  "unsigned-reviewed-repository",
-    "signature":  "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA"
+    }
 }
