@@ -1,10 +1,44 @@
 {
-  "index": {
-    "schemaVersion": 1,
-    "repository": "yexi-fun/PetAgent-plugin",
-    "generatedAt": "1970-01-01T00:00:00Z",
-    "plugins": []
-  },
-  "signingKeyId": "market-key-2026-01",
-  "signature": "GENERATED_BY_PROTECTED_RELEASE_WORKFLOW"
+    "index":  {
+                  "schemaVersion":  1,
+                  "repository":  "yexi-fun/PetAgent-plugin",
+                  "generatedAt":  "2026-08-27T04:05:17.8112420Z",
+                  "plugins":  [
+                                  {
+                                      "id":  "com.example.echo",
+                                      "name":  "Echo MCP",
+                                      "description":  "A minimal MCP server that echoes text.",
+                                      "author":  "PetAgent Plugin Team",
+                                      "signingKeyId":  "publisher-key-com-example-2026-01",
+                                      "signingPublicKey":  "",
+                                      "type":  "mcp",
+                                      "categories":  [
+                                                         "Productivity"
+                                                     ],
+                                      "permissions":  [
+
+                                                      ],
+                                      "dependencies":  [
+
+                                                       ],
+                                      "conflicts":  [
+
+                                                    ],
+                                      "versions":  [
+                                                       {
+                                                           "version":  "0.1.0",
+                                                           "channel":  "stable",
+                                                           "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v1/com.example.echo-0.1.0.zip",
+                                                           "sha256":  "bebbceb80c4912e4f433ad3b1712b282129ca3eaf5ad53fd343f16b6965476bc",
+                                                           "signature":  "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA",
+                                                           "signingKeyId":  "publisher-key-com-example-2026-01",
+                                                           "publishedAt":  "2026-08-27T04:05:17.8042381Z",
+                                                           "revoked":  false
+                                                       }
+                                                   ]
+                                  }
+                              ]
+              },
+    "signingKeyId":  "unsigned-reviewed-repository",
+    "signature":  "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA"
 }

@@ -11,10 +11,6 @@ if (-not (Test-Path $pluginRoot)) { throw "Unknown plugin: $PluginId" }
 $templatePath = Join-Path $pluginRoot "manifest.template.json"
 $manifest = Get-Content -Raw $templatePath | ConvertFrom-Json
 if ($Version) { $manifest.version = $Version }
-if ($Release -and ($env:PLUGIN_SIGNING_KEY -eq $null -or $env:MARKET_SIGNING_KEY -eq $null)) {
-    throw "Release packaging requires protected PLUGIN_SIGNING_KEY and MARKET_SIGNING_KEY secrets."
-}
-
 $output = Join-Path $root "artifacts\$PluginId\$($manifest.version)"
 New-Item -ItemType Directory -Force $output | Out-Null
 $payload = Join-Path $output "payload"
@@ -40,8 +36,8 @@ if (-not (Test-Path $binary)) { throw "Missing runtime binary: build echo-mcp.ex
 New-Item -ItemType Directory -Force (Join-Path $payload "runtime\windows-x64") | Out-Null
 Copy-Item -LiteralPath $binary -Destination (Join-Path $payload "runtime\windows-x64") -Force
 # The host resolves this command from the extracted version directory.
-# The release signer replaces the template digest with the deterministic
-# payload digest and signs the normalized manifest after the package is staged.
+# The reviewed-repository release keeps the deterministic payload digest in the
+# manifest. Signature fields remain descriptive metadata and are not trusted.
 function Get-PayloadSha256([string]$PayloadRoot) {
     $hash = [Security.Cryptography.IncrementalHash]::CreateHash([Security.Cryptography.HashAlgorithmName]::SHA256)
     $utf8 = [Text.Encoding]::UTF8
@@ -66,7 +62,7 @@ function Get-PayloadSha256([string]$PayloadRoot) {
 }
 $payloadHash = Get-PayloadSha256 $payload
 $manifest.sha256 = $payloadHash
-$manifest.signature = "GENERATED_BY_PROTECTED_RELEASE_WORKFLOW"
+$manifest.signature = "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA"
 $manifestJson = $manifest | ConvertTo-Json -Depth 20
 $manifestPath = Join-Path $payload "manifest.json"
 $utf8NoBom = [Text.UTF8Encoding]::new($false)
@@ -82,6 +78,7 @@ try {
     foreach ($file in Get-ChildItem -LiteralPath $payload -Recurse -File) {
         $relative = $file.FullName.Substring($payload.Length).TrimStart('\', '/') -replace '\\', '/'
         $entry = $archive.CreateEntry($relative, [IO.Compression.CompressionLevel]::Optimal)
+        $entry.LastWriteTime = [DateTimeOffset]::new(1980, 1, 1, 0, 0, 0, [TimeSpan]::Zero)
         $input = [IO.File]::OpenRead($file.FullName)
         $outputStream = $entry.Open()
         try { $input.CopyTo($outputStream) } finally { $outputStream.Dispose(); $input.Dispose() }

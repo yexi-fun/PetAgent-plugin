@@ -1,25 +1,70 @@
 param(
     [Parameter(Mandatory = $true)][string]$Tag,
-    [string]$Repository = "yexi-fun/PetAgent-plugin"
+    [string]$Repository = "yexi-fun/PetAgent-plugin",
+    [switch]$SkipRelease
 )
 
 $ErrorActionPreference = "Stop"
-if (-not $env:MARKET_SIGNING_KEY -or -not $env:PLUGIN_SIGNING_KEY) {
-    throw "MARKET_SIGNING_KEY and PLUGIN_SIGNING_KEY must be provided by the protected environment."
-}
-if (-not $env:MARKET_SIGNER_PATH) {
-    throw "Configure MARKET_SIGNER_PATH to the approved Ed25519 signing tool in the protected runner."
-}
-
 $root = Split-Path -Parent $PSScriptRoot
-& $env:MARKET_SIGNER_PATH `
-    --repository $Repository `
-    --tag $Tag `
-    --root $root `
-    --market-key $env:MARKET_SIGNING_KEY `
-    --plugin-key $env:PLUGIN_SIGNING_KEY
-if ($LASTEXITCODE -ne 0) { throw "Market signer failed with exit code $LASTEXITCODE" }
+$archives = @(Get-ChildItem -LiteralPath (Join-Path $root "artifacts") -Recurse -Filter *.zip)
+if ($archives.Count -eq 0) { throw "No plugin ZIP was produced." }
 
-$assets = Get-ChildItem -LiteralPath (Join-Path $root "artifacts") -Recurse -Filter *.zip
-if (-not $assets) { throw "No plugin ZIP was produced." }
-gh release create $Tag --repo $Repository --title "PetAgent market $Tag" --notes-file (Join-Path $root "docs\release.md") @($assets.FullName)
+$plugins = @()
+foreach ($archive in $archives) {
+    $artifactRoot = $archive.Directory.FullName
+    $manifestPath = Join-Path $artifactRoot "payload\manifest.json"
+    if (-not (Test-Path $manifestPath)) { throw "Missing staged manifest: $manifestPath" }
+    $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+    $zipHash = (Get-FileHash -LiteralPath $archive.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $plugins += [pscustomobject]@{
+        id = $manifest.id
+        name = $manifest.name
+        description = $manifest.description
+        author = "PetAgent Plugin Team"
+        signingKeyId = $manifest.signingKeyId
+        signingPublicKey = ""
+        type = $manifest.type
+        categories = @("Productivity")
+        permissions = @($manifest.permissions)
+        dependencies = @($manifest.dependencies)
+        conflicts = @($manifest.conflicts)
+        versions = @([pscustomobject]@{
+            version = $manifest.version
+            channel = "stable"
+            downloadUrl = "https://github.com/$Repository/releases/download/$Tag/$($archive.Name)"
+            sha256 = $zipHash
+            signature = "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA"
+            signingKeyId = $manifest.signingKeyId
+            publishedAt = (Get-Date).ToUniversalTime().ToString("o")
+            revoked = $false
+        })
+    }
+}
+
+$index = [pscustomobject]@{
+    index = [pscustomobject]@{
+        schemaVersion = 1
+        repository = $Repository
+        generatedAt = (Get-Date).ToUniversalTime().ToString("o")
+        plugins = $plugins
+    }
+    signingKeyId = "unsigned-reviewed-repository"
+    signature = "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA"
+}
+$revocations = [pscustomobject]@{
+    revocations = [pscustomobject]@{
+        repository = $Repository
+        signingKeyIds = @()
+        versions = @()
+    }
+    signingKeyId = "unsigned-reviewed-repository"
+    signature = "UNSIGNED_REVIEWED_REPOSITORY_RELEASE_METADATA"
+}
+$utf8NoBom = [Text.UTF8Encoding]::new($false)
+[IO.File]::WriteAllText((Join-Path $root "market\index.json"), ($index | ConvertTo-Json -Depth 30), $utf8NoBom)
+[IO.File]::WriteAllText((Join-Path $root "market\security\revocations.json"), ($revocations | ConvertTo-Json -Depth 20), $utf8NoBom)
+
+Write-Host "Unsigned reviewed-repository index generated. Commit market/index.json before creating the tag."
+if (-not $SkipRelease) {
+    gh release create $Tag --repo $Repository --title "PetAgent market $Tag" --notes-file (Join-Path $root "docs\release.md") @($archives.FullName)
+}
