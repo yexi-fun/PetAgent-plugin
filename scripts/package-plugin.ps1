@@ -41,16 +41,32 @@ if ($manifest.type -eq "mcp") {
 } elseif ($manifest.type -eq "frontend") {
     Copy-Item -LiteralPath (Join-Path $pluginRoot "dist") -Destination $payload -Recurse -Force
 } elseif ($manifest.type -eq "native-dll") {
-    $binary = Join-Path $pluginRoot "runtime\windows-x64\native-probe.dll"
-    New-Item -ItemType Directory -Force (Split-Path -Parent $binary) | Out-Null
+    $library = [string]$manifest.entry.library
+    if (-not $library -or [IO.Path]::IsPathRooted($library) -or $library.Contains('\') -or $library -match '(^|/)\.\.(/|$)' -or [IO.Path]::GetExtension($library) -ne ".dll") {
+        throw "Native DLL entry.library must be a safe relative .dll path."
+    }
     Push-Location (Join-Path $pluginRoot "src")
-    cargo build --release --target x86_64-pc-windows-msvc
-    Pop-Location
-    $built = Join-Path $pluginRoot "src\target\x86_64-pc-windows-msvc\release\native_probe.dll"
-    if (Test-Path $built) { Copy-Item $built $binary -Force }
-    if (-not (Test-Path $binary)) { throw "Missing runtime binary: build native-probe.dll before packaging." }
-    New-Item -ItemType Directory -Force (Join-Path $payload "runtime\windows-x64") | Out-Null
-    Copy-Item -LiteralPath $binary -Destination (Join-Path $payload "runtime\windows-x64") -Force
+    try {
+        $cargoMetadata = cargo metadata --no-deps --format-version 1 | ConvertFrom-Json
+        if ($LASTEXITCODE -ne 0) { throw "Failed to read Cargo metadata for $PluginId." }
+        $cdylibTargets = @(
+            foreach ($package in $cargoMetadata.packages) {
+                foreach ($target in $package.targets) {
+                    if (@($target.kind) -contains "cdylib") { $target }
+                }
+            }
+        )
+        if ($cdylibTargets.Count -ne 1) {
+            throw "Native DLL packaging requires exactly one Cargo cdylib target."
+        }
+        cargo build --release --target x86_64-pc-windows-msvc
+        if ($LASTEXITCODE -ne 0) { throw "Failed to build native DLL for $PluginId." }
+    } finally { Pop-Location }
+    $built = Join-Path ([string]$cargoMetadata.target_directory) "x86_64-pc-windows-msvc\release\$($cdylibTargets[0].name).dll"
+    if (-not (Test-Path $built)) { throw "Missing runtime binary: $($cdylibTargets[0].name).dll" }
+    $payloadBinary = Join-Path $payload ($library -replace '/', '\')
+    New-Item -ItemType Directory -Force (Split-Path -Parent $payloadBinary) | Out-Null
+    Copy-Item -LiteralPath $built -Destination $payloadBinary -Force
 } else {
     throw "Unsupported plugin type: $($manifest.type)"
 }

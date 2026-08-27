@@ -4,7 +4,7 @@
   "name": "Native Probe",
   "version": "0.1.0",
   "apiVersion": 1,
-  "petAgent": ">=0.1.0 <0.2.0",
+  "petAgent": ">=0.1.0, <0.2.0",
   "type": "native-dll",
   "description": "A trusted native ABI v1 tools sample.",
   "entry": {
