@@ -6,4 +6,5 @@
 - 容量计算使用饱和减法并处理零容量，不因异常系统值溢出或除零。
 - 请求和响应使用单行 JSON，输入限制为 1 MiB；stdout 不输出日志。
 - 插件不读取文件内容、不写入磁盘、不访问网络。
+- manifest 的 `petAgent` 使用 Rust `semver::VersionReq` 可解析的 `>=0.1.0, <0.2.0`。
 - 停用插件后，宿主注销 `com_petagent_disk_usage__disk__disk_usage` 并结束 stdio 子进程。

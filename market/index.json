@@ -2,7 +2,7 @@
     "index":  {
                   "schemaVersion":  1,
                   "repository":  "yexi-fun/PetAgent-plugin",
-                  "generatedAt":  "2026-08-27T12:49:41.3066555Z",
+                  "generatedAt":  "2026-08-27T13:06:02.8990613Z",
                   "plugins":  [
                                   {
                                       "id":  "com.example.echo",
@@ -53,11 +53,11 @@
                                                     ],
                                       "versions":  [
                                                        {
-                                                           "version":  "0.1.0",
+                                                           "version":  "0.1.1",
                                                            "channel":  "stable",
-                                                           "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v1/com.petagent.disk-usage-0.1.0.zip",
-                                                           "sha256":  "41f8ada386e78644ef88fecdc24eb9a852bab133817332b6ea27b2afefeb732b",
-                                                           "publishedAt":  "2026-08-27T12:49:41.3066555Z",
+                                                           "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v1/com.petagent.disk-usage-0.1.1.zip",
+                                                           "sha256":  "8901ab9f6b47226544b62bb8eb20fc9b2bf33da08a147b812abc94af60763905",
+                                                           "publishedAt":  "2026-08-27T13:06:02.8990613Z",
                                                            "revoked":  false
                                                        }
                                                    ]
