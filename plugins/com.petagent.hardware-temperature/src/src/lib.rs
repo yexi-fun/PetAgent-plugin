@@ -33,18 +33,68 @@ fn normalize_sensor_type(value: &str) -> Option<&'static str> {
     }
 }
 
+fn is_cpu_sensor_name(name: &str) -> bool {
+    matches!(
+        name.trim().to_ascii_lowercase().as_str(),
+        "core (tctl/tdie)"
+            | "cpu package"
+            | "tctl"
+            | "core"
+            | "cpu"
+            | "cpu core"
+            | "cpu temperature"
+    )
+}
+
+fn is_gpu_sensor_name(name: &str) -> bool {
+    matches!(
+        name.trim().to_ascii_lowercase().as_str(),
+        "gpu core" | "gpu" | "core" | "gpu temperature"
+    )
+}
+
+fn classify_hardware(
+    hardware_type: &str,
+    hardware_name: &str,
+    sensor_name: &str,
+) -> Option<&'static str> {
+    let hardware_type = hardware_type.trim().to_ascii_lowercase();
+    let hardware_name = hardware_name.trim().to_ascii_lowercase();
+    if hardware_type.starts_with("gpu")
+        || hardware_name.contains("gpu")
+        || hardware_name.contains("graphics")
+        || hardware_name.contains("radeon")
+        || hardware_name.contains("nvidia")
+    {
+        return is_gpu_sensor_name(sensor_name).then_some("gpu");
+    }
+    if hardware_type == "cpu"
+        || hardware_name.contains("cpu")
+        || hardware_name.contains("processor")
+    {
+        return is_cpu_sensor_name(sensor_name).then_some("cpu");
+    }
+    // LibreHardwareMonitor reports some older AMD CPU sensors through these
+    // motherboard controllers, matching NexBox's fallback path.
+    if (hardware_type == "superio" || hardware_type == "motherboard")
+        && is_cpu_sensor_name(sensor_name)
+    {
+        return Some("cpu");
+    }
+    None
+}
+
 fn classify_sensor(name: &str, parent: &str, identifier: &str) -> Option<&'static str> {
     let text = format!("{name} {parent} {identifier}").to_ascii_lowercase();
-    if text.contains("gpu")
-        || text.contains("graphics")
-        || text.contains("radeon")
-        || text.contains("nvidia")
+    if is_gpu_sensor_name(name)
+        && (text.contains("gpu")
+            || text.contains("graphics")
+            || text.contains("radeon")
+            || text.contains("nvidia"))
     {
         Some("gpu")
-    } else if text.contains("cpu")
-        || text.contains("package")
-        || text.contains("core")
-        || text.contains("processor")
+    } else if is_cpu_sensor_name(name)
+        && (text.contains("cpu") || text.contains("package") || text.contains("processor"))
     {
         Some("cpu")
     } else {
@@ -78,15 +128,15 @@ fn variant_to_celsius(value: &wmi::Variant) -> Option<f64> {
 }
 
 #[cfg(windows)]
-fn collect_nvml(readings: &mut Vec<Reading>, sources: &mut Vec<&'static str>) {
+fn collect_nvml(readings: &mut Vec<Reading>, sources: &mut Vec<&'static str>) -> bool {
     use nvml_wrapper::{enum_wrappers::device::TemperatureSensor, Nvml};
     let Ok(nvml) = Nvml::init() else {
         sources.push("nvml-unavailable");
-        return;
+        return false;
     };
     let Ok(count) = nvml.device_count() else {
         sources.push("nvml-unavailable");
-        return;
+        return false;
     };
     for index in 0..count {
         let Ok(device) = nvml.device_by_index(index) else {
@@ -105,18 +155,27 @@ fn collect_nvml(readings: &mut Vec<Reading>, sources: &mut Vec<&'static str>) {
             source: "nvml",
         });
     }
-    if !readings.iter().any(|reading| reading.source == "nvml") {
+    let found = readings.iter().any(|reading| reading.source == "nvml");
+    if found {
+        sources.push("nvml");
+    } else {
         sources.push("nvml-no-temperature");
     }
+    found
 }
 
 #[cfg(not(windows))]
-fn collect_nvml(_readings: &mut Vec<Reading>, sources: &mut Vec<&'static str>) {
+fn collect_nvml(_readings: &mut Vec<Reading>, sources: &mut Vec<&'static str>) -> bool {
     sources.push("nvml-windows-only");
+    false
 }
 
 #[cfg(windows)]
-fn collect_hardware_monitor(readings: &mut Vec<Reading>, sources: &mut Vec<&'static str>) {
+fn collect_hardware_monitor(
+    readings: &mut Vec<Reading>,
+    sources: &mut Vec<&'static str>,
+    nvidia_nvml_found: bool,
+) {
     use std::collections::HashMap;
     use wmi::{Variant, WMIConnection};
     let mut found_monitor = false;
@@ -124,6 +183,35 @@ fn collect_hardware_monitor(readings: &mut Vec<Reading>, sources: &mut Vec<&'sta
         let Ok(connection) = WMIConnection::with_namespace_path(namespace) else {
             continue;
         };
+        // The Sensor.Parent field is an identifier. Resolve it to Hardware so
+        // we can apply the same CPU/GPU type and sensor-name filters as NexBox.
+        let mut hardware = HashMap::<String, (String, String)>::new();
+        if let Ok(rows) = connection.raw_query::<HashMap<String, Variant>>(
+            "SELECT Identifier, Name, HardwareType FROM Hardware",
+        ) {
+            for row in rows {
+                let string_value = |key: &str| match row.get(key) {
+                    Some(Variant::String(value)) => value.clone(),
+                    _ => String::new(),
+                };
+                let identifier = string_value("Identifier");
+                let name = string_value("Name");
+                if !identifier.is_empty() {
+                    hardware.insert(
+                        identifier.to_ascii_lowercase(),
+                        (name.clone(), string_value("HardwareType")),
+                    );
+                }
+                // Some OpenHardwareMonitor builds expose Parent as the
+                // display name rather than the identifier.
+                if !name.is_empty() {
+                    hardware.insert(
+                        name.to_ascii_lowercase(),
+                        (name, string_value("HardwareType")),
+                    );
+                }
+            }
+        }
         let Ok(rows) = connection.raw_query::<HashMap<String, Variant>>(
             "SELECT Name, SensorType, Value, Parent, Identifier FROM Sensor",
         ) else {
@@ -142,9 +230,35 @@ fn collect_hardware_monitor(readings: &mut Vec<Reading>, sources: &mut Vec<&'sta
             let name = string_value("Name");
             let parent = string_value("Parent");
             let identifier = string_value("Identifier");
-            let Some(sensor_class) = classify_sensor(&name, &parent, &identifier) else {
+            let metadata = hardware
+                .get(&parent.to_ascii_lowercase())
+                .or_else(|| hardware.get(&identifier.to_ascii_lowercase()));
+            let sensor_class = metadata
+                .and_then(|(hardware_name, hardware_type)| {
+                    classify_hardware(hardware_type, hardware_name, &name)
+                })
+                .or_else(|| classify_sensor(&name, &parent, &identifier));
+            let Some(sensor_class) = sensor_class else {
                 continue;
             };
+            // NVML is NexBox's authoritative NVIDIA path. Keep WMI data for
+            // other GPUs, but avoid duplicate NVIDIA readings when both APIs
+            // expose the same device.
+            let nvidia_hardware = metadata
+                .map(|(hardware_name, hardware_type)| {
+                    let text = format!("{hardware_name} {hardware_type}").to_ascii_lowercase();
+                    text.contains("nvidia") || text.contains("gpunvidia")
+                })
+                .unwrap_or(false);
+            if nvidia_nvml_found
+                && sensor_class == "gpu"
+                && (nvidia_hardware
+                    || format!("{name} {parent} {identifier}")
+                        .to_ascii_lowercase()
+                        .contains("nvidia"))
+            {
+                continue;
+            }
             let Some(value_celsius) = row.get("Value").and_then(variant_to_celsius) else {
                 continue;
             };
@@ -166,7 +280,11 @@ fn collect_hardware_monitor(readings: &mut Vec<Reading>, sources: &mut Vec<&'sta
 }
 
 #[cfg(not(windows))]
-fn collect_hardware_monitor(_readings: &mut Vec<Reading>, sources: &mut Vec<&'static str>) {
+fn collect_hardware_monitor(
+    _readings: &mut Vec<Reading>,
+    sources: &mut Vec<&'static str>,
+    _nvidia_nvml_found: bool,
+) {
     sources.push("hardware-monitor-windows-only");
 }
 
@@ -209,8 +327,8 @@ fn collect_acpi_zones(_readings: &mut Vec<Reading>) {}
 fn collect_temperatures() -> Value {
     let mut readings = Vec::new();
     let mut sources = Vec::new();
-    collect_nvml(&mut readings, &mut sources);
-    collect_hardware_monitor(&mut readings, &mut sources);
+    let nvidia_nvml_found = collect_nvml(&mut readings, &mut sources);
+    collect_hardware_monitor(&mut readings, &mut sources, nvidia_nvml_found);
     collect_acpi_zones(&mut readings);
     readings.sort_by(|left, right| {
         left.sensor_class
@@ -340,6 +458,19 @@ mod tests {
         );
         assert_eq!(classify_sensor("GPU Core", "NVIDIA", "gpu/0"), Some("gpu"));
         assert_eq!(classify_sensor("Temperature", "Mainboard", "board/0"), None);
+        assert_eq!(
+            classify_hardware("GpuNvidia", "NVIDIA GeForce", "GPU Core"),
+            Some("gpu")
+        );
+        assert_eq!(
+            classify_hardware("CPU", "AMD Ryzen", "Core (Tctl/Tdie)"),
+            Some("cpu")
+        );
+        assert_eq!(
+            classify_hardware("Motherboard", "ASUS", "CPU Temperature"),
+            Some("cpu")
+        );
+        assert_eq!(classify_hardware("Motherboard", "ASUS", "System"), None);
     }
     #[test]
     fn validates_celsius_values() {

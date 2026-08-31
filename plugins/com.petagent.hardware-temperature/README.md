@@ -2,7 +2,7 @@
 
 该插件提供 `hardware.temperature` 工具，用于读取 CPU、GPU 和系统热区温度。
 
-数据来源：NVIDIA GPU 使用 NVML；CPU、AMD GPU、Intel GPU 等温度需要运行 LibreHardwareMonitor 或 OpenHardwareMonitor 的 WMI 传感器；ACPI thermal zone 会单独报告，不会伪装成 CPU 核心温度。
+数据来源：NVIDIA GPU 优先使用 NVML（同一设备的 WMI 温度会去重）；CPU、AMD GPU、Intel GPU 等温度使用 LibreHardwareMonitor 或 OpenHardwareMonitor 的 WMI 传感器。WMI 传感器会先通过 `Sensor.Parent` 关联 `Hardware.HardwareType`，再按 NexBox 的 CPU/GPU 温度传感器名称筛选。ACPI thermal zone 会单独报告，不会伪装成 CPU 核心温度。
 
 Windows 没有统一的 CPU 核心温度 API。没有硬件监控服务时，工具返回 `available: false` 以及 `sources` / `limitations` 说明。
 

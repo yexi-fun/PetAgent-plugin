@@ -9,6 +9,12 @@ $root = Split-Path -Parent $PSScriptRoot
 $archives = @(Get-ChildItem -LiteralPath (Join-Path $root "artifacts") -Recurse -Filter *.zip)
 if ($archives.Count -eq 0) { throw "No plugin ZIP was produced." }
 
+$existingIndexPath = Join-Path $root "market\index.json"
+$existingIndex = $null
+if (Test-Path $existingIndexPath) {
+    $existingIndex = Get-Content -Raw -LiteralPath $existingIndexPath | ConvertFrom-Json
+}
+
 $plugins = @()
 foreach ($archive in $archives) {
     $artifactRoot = $archive.Directory.FullName
@@ -16,13 +22,25 @@ foreach ($archive in $archives) {
     if (-not (Test-Path $manifestPath)) { throw "Missing staged manifest: $manifestPath" }
     $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
     $zipHash = (Get-FileHash -LiteralPath $archive.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $previous = @()
+    if ($existingIndex -and $existingIndex.index -and $existingIndex.index.plugins) {
+        $previous = @($existingIndex.index.plugins | Where-Object { $_.id -eq $manifest.id })
+    }
+    $categories = if ($previous.Count -gt 0 -and $previous[0].categories) {
+        @($previous[0].categories)
+    } else {
+        @("Productivity")
+    }
+    if ($manifest.id -eq "com.petagent.hardware-temperature") {
+        $categories = @("System")
+    }
     $plugins += [pscustomobject]@{
         id = $manifest.id
         name = $manifest.name
         description = $manifest.description
         author = "PetAgent Plugin Team"
         type = $manifest.type
-        categories = @("Productivity")
+        categories = $categories
         permissions = @($manifest.permissions)
         dependencies = @($manifest.dependencies)
         conflicts = @($manifest.conflicts)
@@ -36,6 +54,28 @@ foreach ($archive in $archives) {
         })
     }
 }
+
+# Multiple staged archives can represent different versions of one plugin.
+# Keep one market entry per ID and merge all versions into that entry.
+$mergedPlugins = @()
+foreach ($group in ($plugins | Group-Object -Property id)) {
+    $first = $group.Group[0]
+    $versions = @($group.Group | ForEach-Object { $_.versions })
+    $versions = @($versions | Sort-Object version)
+    $mergedPlugins += [pscustomobject]@{
+        id = $first.id
+        name = $first.name
+        description = $first.description
+        author = $first.author
+        type = $first.type
+        categories = @($first.categories)
+        permissions = $first.permissions
+        dependencies = $first.dependencies
+        conflicts = $first.conflicts
+        versions = @($versions)
+    }
+}
+$plugins = $mergedPlugins
 
 $index = [pscustomobject]@{
     index = [pscustomobject]@{
