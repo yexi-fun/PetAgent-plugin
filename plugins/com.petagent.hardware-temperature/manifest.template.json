@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "id": "com.petagent.hardware-temperature",
   "name": "硬件温度",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "apiVersion": 1,
   "petAgent": ">=0.1.0, <0.2.0",
   "type": "native-dll",
-  "description": "读取 CPU、GPU 和系统热区温度；NVIDIA 优先使用 NVML，其他传感器使用硬件监控软件 WMI。",
+  "description": "内置 LibreHardwareMonitor 采集 CPU、GPU 和系统热区温度；NVIDIA 优先使用 NVML。",
   "entry": {
     "kind": "native-dll",
     "library": "runtime/windows-x64/hardware-temperature.dll",

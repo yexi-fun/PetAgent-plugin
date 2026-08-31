@@ -67,6 +67,38 @@ if ($manifest.type -eq "mcp") {
     $payloadBinary = Join-Path $payload ($library -replace '/', '\')
     New-Item -ItemType Directory -Force (Split-Path -Parent $payloadBinary) | Out-Null
     Copy-Item -LiteralPath $built -Destination $payloadBinary -Force
+    $helperRoot = Join-Path $pluginRoot "helper"
+    $helperProject = Join-Path $helperRoot "HardwareTemperature.Helper.csproj"
+    if (-not (Test-Path $helperProject)) { throw "Missing LibreHardwareMonitor helper project: $helperProject" }
+    Push-Location $helperRoot
+    try {
+        dotnet build $helperProject --configuration Release --nologo
+        if ($LASTEXITCODE -ne 0) { throw "Failed to build LibreHardwareMonitor helper for $PluginId." }
+    } finally { Pop-Location }
+    $helperOutput = Join-Path $helperRoot "bin\Release\net472\hardware-temperature-helper.exe"
+    $helperVendor = Join-Path $helperRoot "vendor"
+    if (-not (Test-Path $helperOutput)) { throw "Missing helper binary: $helperOutput" }
+    foreach ($runtimeFile in @(
+        "hardware-temperature-helper.exe",
+        "hardware-temperature-helper.exe.config",
+        "LibreHardwareMonitorLib.dll",
+        "PawnIO_setup.exe",
+        "System.Memory.dll",
+        "System.Runtime.CompilerServices.Unsafe.dll",
+        "System.Numerics.Vectors.dll",
+        "System.Buffers.dll",
+        "RAMSPDToolkit-NDD.dll",
+        "HidSharp.dll",
+        "DiskInfoToolkit.dll",
+        "BlackSharp.Core.dll"
+    )) {
+        $source = if ($runtimeFile -eq "hardware-temperature-helper.exe" -or $runtimeFile -eq "hardware-temperature-helper.exe.config") {
+            Join-Path $helperRoot "bin\Release\net472\$runtimeFile"
+        } else { Join-Path $helperVendor $runtimeFile }
+        if (-not (Test-Path $source)) { throw "Missing helper runtime file: $source" }
+        Copy-Item -LiteralPath $source -Destination (Join-Path (Split-Path -Parent $payloadBinary) $runtimeFile) -Force
+    }
+    Copy-Item -LiteralPath (Join-Path $helperRoot "THIRD-PARTY-NOTICES.txt") -Destination $payload -Force
 } else {
     throw "Unsupported plugin type: $($manifest.type)"
 }

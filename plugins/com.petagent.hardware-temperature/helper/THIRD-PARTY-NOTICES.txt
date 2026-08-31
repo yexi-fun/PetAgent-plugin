@@ -1,0 +1,9 @@
+This plugin bundles LibreHardwareMonitor 0.9.6 and its runtime dependencies.
+
+LibreHardwareMonitor and the bundled libraries are distributed under their
+respective licenses. The LibreHardwareMonitor source and license are available
+at https://github.com/LibreHardwareMonitor/LibreHardwareMonitor.
+
+The bundled PawnIO_setup.exe is distributed by LibreHardwareMonitor as an
+optional resource and is used only to install the PawnIO driver with explicit
+administrator consent.

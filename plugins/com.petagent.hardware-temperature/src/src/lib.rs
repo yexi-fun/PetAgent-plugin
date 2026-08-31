@@ -34,16 +34,20 @@ fn normalize_sensor_type(value: &str) -> Option<&'static str> {
 }
 
 fn is_cpu_sensor_name(name: &str) -> bool {
+    let name = name.trim().to_ascii_lowercase();
     matches!(
-        name.trim().to_ascii_lowercase().as_str(),
+        name.as_str(),
         "core (tctl/tdie)"
             | "cpu package"
             | "tctl"
             | "core"
+            | "core max"
+            | "core average"
             | "cpu"
             | "cpu core"
             | "cpu temperature"
-    )
+    ) || name.starts_with("p-core #")
+        || name.starts_with("e-core #")
 }
 
 fn is_gpu_sensor_name(name: &str) -> bool {
@@ -125,6 +129,148 @@ fn variant_to_celsius(value: &wmi::Variant) -> Option<f64> {
         _ => return None,
     };
     (-100.0..200.0).contains(&parsed).then(|| round_two(parsed))
+}
+
+#[cfg(windows)]
+fn collect_lhm_helper(
+    readings: &mut Vec<Reading>,
+    sources: &mut Vec<&'static str>,
+    nvidia_nvml_found: bool,
+) {
+    use std::io::{Read, Write};
+    use std::os::windows::ffi::OsStringExt;
+    use std::os::windows::process::CommandExt;
+    use std::path::PathBuf;
+    use std::process::{Command, Stdio};
+
+    // Resolve the DLL's own directory instead of relying on the host cwd.
+    // Plugins are extracted under a versioned directory by PetAgent.
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetModuleHandleExW(flags: u32, address: *const u16, module: *mut usize) -> i32;
+        fn GetModuleFileNameW(module: usize, filename: *mut u16, size: u32) -> u32;
+    }
+    let mut module = 0usize;
+    let mut path = [0u16; 32768];
+    let ok = unsafe {
+        GetModuleHandleExW(0x00000004, collect_lhm_helper as *const u16, &mut module) != 0
+    };
+    if !ok {
+        sources.push("librehardwaremonitor-helper-unavailable");
+        return;
+    }
+    let length =
+        unsafe { GetModuleFileNameW(module, path.as_mut_ptr(), path.len() as u32) } as usize;
+    if length == 0 || length >= path.len() {
+        sources.push("librehardwaremonitor-helper-unavailable");
+        return;
+    }
+    let module_path = std::ffi::OsString::from_wide(&path[..length]);
+    let Some(module_dir) = PathBuf::from(module_path).parent().map(|p| p.to_path_buf()) else {
+        sources.push("librehardwaremonitor-helper-unavailable");
+        return;
+    };
+    let helper = module_dir.join("hardware-temperature-helper.exe");
+    if !helper.is_file() {
+        sources.push("librehardwaremonitor-helper-unavailable");
+        return;
+    }
+
+    let mut child = match Command::new(helper)
+        .creation_flags(0x08000000)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(_) => {
+            sources.push("librehardwaremonitor-helper-unavailable");
+            return;
+        }
+    };
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(b"read\n");
+    }
+    let mut output = Vec::new();
+    if let Some(mut stdout) = child.stdout.take() {
+        let _ = stdout.read_to_end(&mut output);
+    }
+    let _ = child.wait();
+    let Ok(response) = serde_json::from_slice::<Value>(&output) else {
+        sources.push("librehardwaremonitor-helper-invalid-response");
+        return;
+    };
+    if response.get("ok").and_then(Value::as_bool) != Some(true) {
+        sources.push("librehardwaremonitor-helper-error");
+        return;
+    }
+    let mut found = false;
+    if let Some(sensors) = response.get("sensors").and_then(Value::as_array) {
+        for sensor in sensors {
+            if normalize_sensor_type(
+                sensor
+                    .get("sensorType")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default(),
+            ) != Some("temperature")
+            {
+                continue;
+            }
+            let name = sensor
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let hardware = sensor
+                .get("hardware")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let hardware_type = sensor
+                .get("hardwareType")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let Some(sensor_class) = classify_hardware(hardware_type, hardware, name)
+                .or_else(|| classify_sensor(name, hardware, hardware_type))
+            else {
+                continue;
+            };
+            if nvidia_nvml_found
+                && sensor_class == "gpu"
+                && format!("{hardware} {hardware_type}")
+                    .to_ascii_lowercase()
+                    .contains("nvidia")
+            {
+                continue;
+            }
+            let Some(value) = sensor.get("value").and_then(Value::as_f64) else {
+                continue;
+            };
+            if !(-100.0..200.0).contains(&value) {
+                continue;
+            }
+            readings.push(Reading {
+                sensor_class,
+                name: name.to_string(),
+                value_celsius: round_two(value),
+                source: "librehardwaremonitor-helper",
+            });
+            found = true;
+        }
+    }
+    sources.push(if found {
+        "librehardwaremonitor-helper"
+    } else {
+        "librehardwaremonitor-helper-no-temperature"
+    });
+}
+
+#[cfg(not(windows))]
+fn collect_lhm_helper(
+    _readings: &mut Vec<Reading>,
+    sources: &mut Vec<&'static str>,
+    _nvidia_nvml_found: bool,
+) {
+    sources.push("librehardwaremonitor-helper-windows-only");
 }
 
 #[cfg(windows)]
@@ -328,6 +474,7 @@ fn collect_temperatures() -> Value {
     let mut readings = Vec::new();
     let mut sources = Vec::new();
     let nvidia_nvml_found = collect_nvml(&mut readings, &mut sources);
+    collect_lhm_helper(&mut readings, &mut sources, nvidia_nvml_found);
     collect_hardware_monitor(&mut readings, &mut sources, nvidia_nvml_found);
     collect_acpi_zones(&mut readings);
     readings.sort_by(|left, right| {
