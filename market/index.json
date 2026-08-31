@@ -2,7 +2,7 @@
     "index":  {
                   "schemaVersion":  1,
                   "repository":  "yexi-fun/PetAgent-plugin",
-                  "generatedAt":  "2026-08-31T10:39:12.3142416Z",
+                  "generatedAt":  "2026-08-31T10:40:31.1161138Z",
                   "plugins":  [
                                   {
                                       "id":  "com.example.echo",
@@ -28,7 +28,7 @@
                                                            "channel":  "stable",
                                                            "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v3/com.example.echo-0.1.0.zip",
                                                            "sha256":  "e188bcc1f637f758b6f64f298bddd022d35ef0a5081712ca35574524e12a955f",
-                                                           "publishedAt":  "2026-08-31T10:39:12.2541944Z",
+                                                           "publishedAt":  "2026-08-31T10:40:31.0589832Z",
                                                            "revoked":  false
                                                        }
                                                    ]
@@ -57,7 +57,7 @@
                                                            "channel":  "stable",
                                                            "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v3/com.example.frontend-0.1.0.zip",
                                                            "sha256":  "f3f13298db4e6e3fb9f3d1f98bac68b648352e18fbaa9f04cac829fd3db7a83e",
-                                                           "publishedAt":  "2026-08-31T10:39:12.2622641Z",
+                                                           "publishedAt":  "2026-08-31T10:40:31.0679788Z",
                                                            "revoked":  false
                                                        }
                                                    ]
@@ -86,7 +86,7 @@
                                                            "channel":  "stable",
                                                            "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v3/com.example.native-probe-0.1.0.zip",
                                                            "sha256":  "321ee818021a1c2df367f1c4f829c75465e7ce9d6f1b7ce907aea8f610db051c",
-                                                           "publishedAt":  "2026-08-31T10:39:12.2652662Z",
+                                                           "publishedAt":  "2026-08-31T10:40:31.0717897Z",
                                                            "revoked":  false
                                                        }
                                                    ]
@@ -115,7 +115,7 @@
                                                            "channel":  "stable",
                                                            "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v3/com.petagent.disk-usage-0.1.0.zip",
                                                            "sha256":  "41f8ada386e78644ef88fecdc24eb9a852bab133817332b6ea27b2afefeb732b",
-                                                           "publishedAt":  "2026-08-31T10:39:12.2696859Z",
+                                                           "publishedAt":  "2026-08-31T10:40:31.0747762Z",
                                                            "revoked":  false
                                                        },
                                                        {
@@ -123,7 +123,7 @@
                                                            "channel":  "stable",
                                                            "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v3/com.petagent.disk-usage-0.1.1.zip",
                                                            "sha256":  "8901ab9f6b47226544b62bb8eb20fc9b2bf33da08a147b812abc94af60763905",
-                                                           "publishedAt":  "2026-08-31T10:39:12.2741990Z",
+                                                           "publishedAt":  "2026-08-31T10:40:31.0788235Z",
                                                            "revoked":  false
                                                        }
                                                    ]
@@ -152,7 +152,7 @@
                                                            "channel":  "stable",
                                                            "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v3/com.petagent.hardware-temperature-0.1.0.zip",
                                                            "sha256":  "18b990ca5c963f20162ce961e3f9382dc2bd86a965b3878163e87e035be4de8e",
-                                                           "publishedAt":  "2026-08-31T10:39:12.2772003Z",
+                                                           "publishedAt":  "2026-08-31T10:40:31.0828320Z",
                                                            "revoked":  false
                                                        },
                                                        {
@@ -160,7 +160,7 @@
                                                            "channel":  "stable",
                                                            "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v3/com.petagent.hardware-temperature-0.1.1.zip",
                                                            "sha256":  "f045da0501e08e7371a56dc9a0409c60ed63f7b09c5067ad1a75789649c43ec4",
-                                                           "publishedAt":  "2026-08-31T10:39:12.2814483Z",
+                                                           "publishedAt":  "2026-08-31T10:40:31.0858325Z",
                                                            "revoked":  false
                                                        },
                                                        {
@@ -168,7 +168,7 @@
                                                            "channel":  "stable",
                                                            "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v3/com.petagent.hardware-temperature-0.1.2.zip",
                                                            "sha256":  "47a26fa2f665d7b6adc382d7a7c361823ebdc3293e331f8c95b2c97608362d6a",
-                                                           "publishedAt":  "2026-08-31T10:39:12.2939714Z",
+                                                           "publishedAt":  "2026-08-31T10:40:31.0990470Z",
                                                            "revoked":  false
                                                        }
                                                    ]

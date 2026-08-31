@@ -6,7 +6,15 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$archives = @(Get-ChildItem -LiteralPath (Join-Path $root "artifacts") -Recurse -Filter *.zip)
+$archives = @(Get-ChildItem -LiteralPath (Join-Path $root "artifacts") -Recurse -Filter *.zip | Where-Object {
+    $manifestPath = Join-Path $_.Directory.FullName "payload\manifest.json"
+    if (-not (Test-Path $manifestPath)) { return $false }
+    $staged = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+    $templatePath = Join-Path $root "plugins\$($staged.id)\manifest.template.json"
+    if (-not (Test-Path $templatePath)) { return $false }
+    $template = Get-Content -Raw -LiteralPath $templatePath | ConvertFrom-Json
+    try { return ([version]$staged.version -le [version]$template.version) } catch { return $false }
+})
 if ($archives.Count -eq 0) { throw "No plugin ZIP was produced." }
 
 $existingIndexPath = Join-Path $root "market\index.json"
