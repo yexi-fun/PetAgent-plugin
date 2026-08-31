@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using System.Web.Script.Serialization;
 using Microsoft.Win32;
 using LibreHardwareMonitor.Hardware;
@@ -95,7 +98,7 @@ namespace PetAgent.HardwareTemperature
             return new Response { ok = true, sensors = readings };
         }
 
-        public static int Main()
+        private static int RunServer(int port)
         {
             var computer = new Computer
             {
@@ -112,17 +115,24 @@ namespace PetAgent.HardwareTemperature
             {
                 EnsurePawnIo();
                 computer.Open();
-                string line;
-                while ((line = Console.ReadLine()) != null)
+                var listener = new TcpListener(IPAddress.Loopback, port);
+                listener.Start();
+                while (true)
                 {
-                    if (line.Trim().Equals("read", StringComparison.OrdinalIgnoreCase)
-                        || line.IndexOf("\"cmd\"", StringComparison.OrdinalIgnoreCase) >= 0)
+                    using (var client = listener.AcceptTcpClient())
+                    using (var stream = client.GetStream())
+                    using (var reader = new StreamReader(stream, Encoding.UTF8, false, 1024, true))
+                    using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, true)
                     {
-                        Console.WriteLine(Json.Serialize(ReadSensors(computer)));
-                        Console.Out.Flush();
+                        AutoFlush = true
+                    })
+                    {
+                        var line = reader.ReadLine();
+                        if (line != null && (line.Trim().Equals("read", StringComparison.OrdinalIgnoreCase)
+                            || line.IndexOf("\"cmd\"", StringComparison.OrdinalIgnoreCase) >= 0))
+                            writer.WriteLine(Json.Serialize(ReadSensors(computer)));
                     }
                 }
-                return 0;
             }
             catch (Exception ex)
             {
@@ -139,6 +149,23 @@ namespace PetAgent.HardwareTemperature
             {
                 try { computer.Close(); } catch { }
             }
+        }
+
+        public static int Main(string[] args)
+        {
+            var port = 47631;
+            for (var i = 0; i + 1 < args.Length; i++)
+            {
+                if (args[i].Equals("--port", StringComparison.OrdinalIgnoreCase))
+                    int.TryParse(args[i + 1], out port);
+            }
+            if (Array.Exists(args, a => a.Equals("--server", StringComparison.OrdinalIgnoreCase)))
+                return RunServer(port);
+
+            // The resident mode is the only supported mode. Keep a useful error
+            // for accidentally launching the bundled executable by hand.
+            Console.Error.WriteLine("Use --server --port <port>.");
+            return 2;
         }
     }
 }

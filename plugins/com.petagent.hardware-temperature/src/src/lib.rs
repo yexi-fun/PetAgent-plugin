@@ -138,10 +138,13 @@ fn collect_lhm_helper(
     nvidia_nvml_found: bool,
 ) {
     use std::io::{Read, Write};
+    use std::net::{TcpStream, ToSocketAddrs};
     use std::os::windows::ffi::OsStringExt;
-    use std::os::windows::process::CommandExt;
     use std::path::PathBuf;
-    use std::process::{Command, Stdio};
+    use std::thread;
+    use std::time::Duration;
+
+    const HELPER_PORT: u16 = 47631;
 
     // Resolve the DLL's own directory instead of relying on the host cwd.
     // Plugins are extracted under a versioned directory by PetAgent.
@@ -176,27 +179,75 @@ fn collect_lhm_helper(
         return;
     }
 
-    let mut child = match Command::new(helper)
-        .creation_flags(0x08000000)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-    {
-        Ok(child) => child,
-        Err(_) => {
-            sources.push("librehardwaremonitor-helper-unavailable");
+    fn connect() -> Option<std::net::TcpStream> {
+        ("127.0.0.1", HELPER_PORT)
+            .to_socket_addrs()
+            .ok()?
+            .find_map(|address| {
+                TcpStream::connect_timeout(&address, Duration::from_millis(250)).ok()
+            })
+    }
+
+    // ShellExecute("runas") is required because an elevated process cannot
+    // reliably inherit the native DLL's stdin/stdout pipes. The helper stays
+    // resident and serves subsequent requests over loopback TCP.
+    fn launch_elevated(helper: &std::path::Path, directory: &std::path::Path) -> bool {
+        use std::os::windows::ffi::OsStrExt;
+        #[link(name = "shell32")]
+        extern "system" {
+            fn ShellExecuteW(
+                hwnd: *mut c_void,
+                operation: *const u16,
+                file: *const u16,
+                parameters: *const u16,
+                directory: *const u16,
+                show: i32,
+            ) -> isize;
+        }
+        let operation: Vec<u16> = std::ffi::OsStr::new("runas")
+            .encode_wide()
+            .chain(Some(0))
+            .collect();
+        let file: Vec<u16> = helper.as_os_str().encode_wide().chain(Some(0)).collect();
+        let parameters: Vec<u16> = std::ffi::OsStr::new("--server --port 47631")
+            .encode_wide()
+            .chain(Some(0))
+            .collect();
+        let directory: Vec<u16> = directory.as_os_str().encode_wide().chain(Some(0)).collect();
+        unsafe {
+            ShellExecuteW(
+                std::ptr::null_mut(),
+                operation.as_ptr(),
+                file.as_ptr(),
+                parameters.as_ptr(),
+                directory.as_ptr(),
+                0,
+            ) > 32
+        }
+    }
+
+    let mut stream = connect();
+    if stream.is_none() {
+        if !launch_elevated(&helper, &module_dir) {
+            sources.push("librehardwaremonitor-helper-elevation-denied");
             return;
         }
+        for _ in 0..40 {
+            thread::sleep(Duration::from_millis(250));
+            if let Some(candidate) = connect() {
+                stream = Some(candidate);
+                break;
+            }
+        }
+    }
+    let Some(mut stream) = stream else {
+        sources.push("librehardwaremonitor-helper-unavailable");
+        return;
     };
-    if let Some(mut stdin) = child.stdin.take() {
-        let _ = stdin.write_all(b"read\n");
-    }
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+    let _ = stream.write_all(b"read\n");
     let mut output = Vec::new();
-    if let Some(mut stdout) = child.stdout.take() {
-        let _ = stdout.read_to_end(&mut output);
-    }
-    let _ = child.wait();
+    let _ = stream.read_to_end(&mut output);
     let Ok(response) = serde_json::from_slice::<Value>(&output) else {
         sources.push("librehardwaremonitor-helper-invalid-response");
         return;

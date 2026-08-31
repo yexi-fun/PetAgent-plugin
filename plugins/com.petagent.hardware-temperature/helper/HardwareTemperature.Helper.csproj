@@ -5,6 +5,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyName>hardware-temperature-helper</AssemblyName>
     <RootNamespace>PetAgent.HardwareTemperature</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>

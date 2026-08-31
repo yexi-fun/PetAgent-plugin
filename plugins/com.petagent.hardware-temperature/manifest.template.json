@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "com.petagent.hardware-temperature",
   "name": "硬件温度",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "apiVersion": 1,
   "petAgent": ">=0.1.0, <0.2.0",
   "type": "native-dll",
