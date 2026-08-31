@@ -59,7 +59,8 @@ foreach ($archive in $archives) {
 # Keep one market entry per ID and merge all versions into that entry.
 $mergedPlugins = @()
 foreach ($group in ($plugins | Group-Object -Property id)) {
-    $first = $group.Group[0]
+    $ordered = @($group.Group | Sort-Object { [version]$_.versions.version } -Descending)
+    $first = $ordered[0]
     $versions = @($group.Group | ForEach-Object { $_.versions })
     $versions = @($versions | Sort-Object version)
     $mergedPlugins += [pscustomobject]@{
