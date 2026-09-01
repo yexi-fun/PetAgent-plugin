@@ -1,0 +1,12 @@
+{
+  "servers": [
+    {
+      "name": "clock",
+      "transport": "stdio",
+      "command": "runtime/windows-x64/petagent-clock-mcp.exe",
+      "args": [],
+      "env": {}
+    }
+  ]
+}
+

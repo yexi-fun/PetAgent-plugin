@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "com.petagent.clock",
+  "name": "桌宠时钟",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "petAgent": ">=0.1.0, <0.2.0",
+  "type": "mcp",
+  "description": "查询当前本地时间，并在桌宠旁的独立气泡中显示。",
+  "entry": { "kind": "mcp", "config": "runtime/mcp.json" },
+  "dependencies": [],
+  "conflicts": [],
+  "permissions": [],
+  "targets": ["windows-x64"],
+  "configSchema": "config.schema.json",
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+}
+

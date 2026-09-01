@@ -92,6 +92,35 @@
                                                    ]
                                   },
                                   {
+                                      "id":  "com.petagent.clock",
+                                      "name":  "桌宠时钟",
+                                      "description":  "查询当前本地时间，并在桌宠旁的独立气泡中显示。",
+                                      "author":  "PetAgent Plugin Team",
+                                      "type":  "mcp",
+                                      "categories":  [
+                                                         "Productivity"
+                                                     ],
+                                      "permissions":  [
+
+                                                      ],
+                                      "dependencies":  [
+
+                                                       ],
+                                      "conflicts":  [
+
+                                                    ],
+                                      "versions":  [
+                                                       {
+                                                           "version":  "0.1.0",
+                                                           "channel":  "stable",
+                                                           "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v2/com.petagent.clock-0.1.0.zip",
+                                                           "sha256":  "badf2882ecab680edab2e8b6c090466103f7c2e6d98788551f384bd73d48a94b",
+                                                           "publishedAt":  "2026-09-01T11:54:34.8618099Z",
+                                                           "revoked":  false
+                                                       }
+                                                   ]
+                                  },
+                                  {
                                       "id":  "com.petagent.disk-usage",
                                       "name":  "磁盘占用",
                                       "description":  "获取系统各磁盘的容量、已用空间、可用空间和占用百分比。",
