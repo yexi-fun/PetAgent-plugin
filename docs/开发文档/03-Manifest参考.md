@@ -36,6 +36,8 @@
 | `native-dll` | `library`、`abiVersion: 1`、`serviceName: "tools"`、`serviceApiVersion: 1`。 |
 | `frontend` | `frontend.root` 与 `frontend.index`，且 index 必须位于 root 内。 |
 
+frontend 还可选声明 `protocolVersion`（当前为 `1`）、`capabilities`（`host-info`、`config.read`、`config.write`、`window.close`、`window.state`、`notifications`、`lifecycle-events`）和受宿主边界限制的 `window` 尺寸参数。能力白名单决定可调用的 frontend RPC；`permissions` 仍是可信代码模型下的说明标签，不是沙箱 ACL。
+
 所有路径必须是相对路径，不能包含 `..`、反斜杠、盘符或前导 `/`。运行时还会检查解析后的路径没有逃出插件版本目录。
 
 ## 配置隔离

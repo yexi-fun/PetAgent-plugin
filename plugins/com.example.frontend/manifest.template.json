@@ -6,10 +6,16 @@
   "apiVersion": 1,
   "petAgent": ">=0.1.0 <0.2.0",
   "type": "frontend",
-  "description": "A trusted frontend plugin sample.",
+  "description": "A trusted frontend plugin sample with host configuration and window RPC.",
   "entry": {
     "kind": "frontend",
-    "frontend": { "root": "dist", "index": "dist/index.html" }
+    "frontend": {
+      "root": "dist",
+      "index": "dist/index.html",
+      "protocolVersion": 1,
+      "capabilities": ["host-info", "config.read", "config.write", "window.close", "window.state", "notifications", "lifecycle-events"],
+      "window": { "width": 720, "height": 520, "minWidth": 420, "minHeight": 320, "resizable": true, "center": true }
+    }
   },
   "dependencies": [],
   "conflicts": [],

@@ -32,6 +32,24 @@ foreach ($manifestPath in Get-ChildItem -LiteralPath (Join-Path $root "plugins")
     }
     if ($manifest.type -eq "frontend") {
         if (-not $manifest.entry.frontend.root -or -not $manifest.entry.frontend.index -or $manifest.entry.frontend.index -notlike "$($manifest.entry.frontend.root)/*") { throw "Invalid frontend entry: $($manifest.id)" }
+        if ($manifest.entry.frontend.protocolVersion -and $manifest.entry.frontend.protocolVersion -ne 1) { throw "Unsupported frontend protocol version: $($manifest.id)" }
+        $supportedCapabilities = @("host-info", "config.read", "config.write", "window.close", "window.state", "notifications", "lifecycle-events")
+        $seenCapabilities = @{}
+        foreach ($capability in @($manifest.entry.frontend.capabilities)) {
+            if ($supportedCapabilities -notcontains $capability) { throw "Unsupported frontend capability in $($manifest.id): $capability" }
+            if ($seenCapabilities.ContainsKey($capability)) { throw "Duplicate frontend capability in $($manifest.id): $capability" }
+            $seenCapabilities[$capability] = $true
+        }
+        if ($manifest.entry.frontend.window) {
+            foreach ($field in @("width", "height", "minWidth", "minHeight")) {
+                $value = $manifest.entry.frontend.window.$field
+                if ($null -ne $value) {
+                    $min = if ($field -match "height") { 320 } else { 420 }
+                    $max = if ($field -match "height") { 960 } else { 1280 }
+                    if ($value -lt $min -or $value -gt $max) { throw "Invalid frontend window $field in $($manifest.id): $value" }
+                }
+            }
+        }
     }
     foreach ($field in @("config", "executable", "library", "configSchema")) {
         $value = $manifest.entry.$field

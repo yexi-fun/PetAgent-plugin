@@ -24,6 +24,7 @@ if (Test-Path $existingIndexPath) {
 }
 
 $plugins = @()
+$emptyFrontendCapabilities = [System.Collections.Generic.List[string]]::new()
 foreach ($archive in $archives) {
     $artifactRoot = $archive.Directory.FullName
     $manifestPath = Join-Path $artifactRoot "payload\manifest.json"
@@ -52,6 +53,9 @@ foreach ($archive in $archives) {
         permissions = @($manifest.permissions)
         dependencies = @($manifest.dependencies)
         conflicts = @($manifest.conflicts)
+        frontendProtocolVersion = if ($manifest.type -eq "frontend") { $manifest.entry.frontend.protocolVersion } else { $null }
+        frontendCapabilities = if ($manifest.type -eq "frontend") { @($manifest.entry.frontend.capabilities) } else { $emptyFrontendCapabilities }
+        frontendWindow = if ($manifest.type -eq "frontend") { $manifest.entry.frontend.window } else { $null }
         versions = @([pscustomobject]@{
             version = $manifest.version
             channel = "stable"
@@ -71,7 +75,7 @@ foreach ($group in ($plugins | Group-Object -Property id)) {
     $first = $ordered[0]
     $versions = @($group.Group | ForEach-Object { $_.versions })
     $versions = @($versions | Sort-Object version)
-    $mergedPlugins += [pscustomobject]@{
+    $mergedPlugin = [pscustomobject]@{
         id = $first.id
         name = $first.name
         description = $first.description
@@ -81,8 +85,17 @@ foreach ($group in ($plugins | Group-Object -Property id)) {
         permissions = $first.permissions
         dependencies = $first.dependencies
         conflicts = $first.conflicts
+        frontendProtocolVersion = $first.frontendProtocolVersion
+        frontendCapabilities = $first.frontendCapabilities
+        frontendWindow = $first.frontendWindow
         versions = @($versions)
     }
+    if ($first.type -ne "frontend") {
+        $mergedPlugin.PSObject.Properties.Remove("frontendProtocolVersion")
+        $mergedPlugin.PSObject.Properties.Remove("frontendCapabilities")
+        $mergedPlugin.PSObject.Properties.Remove("frontendWindow")
+    }
+    $mergedPlugins += $mergedPlugin
 }
 $plugins = $mergedPlugins
 
