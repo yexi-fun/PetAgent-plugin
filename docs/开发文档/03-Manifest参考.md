@@ -40,7 +40,7 @@ frontend 还可选声明 `protocolVersion`（当前为 `1`）、`capabilities`�
 
 所有路径必须是相对路径，不能包含 `..`、反斜杠、盘符或前导 `/`。运行时还会检查解析后的路径没有逃出插件版本目录。
 
-`app` 必须同时声明 `entry.service` 与 `entry.frontend`。service 使用包内相对 `.exe`、`protocolVersion: 1` 和 `startup: on-demand|enabled`；frontend 可声明 `window.placement: pet-relative` 与偏移量。顶层 `agent.capabilities` 是 service 能力交集的工具注册候选。
+`app` 必须同时声明 `entry.service` 与 `entry.frontend`。service 使用包内相对 `.exe`、`protocolVersion: 1` 和 `startup: on-demand|enabled`；frontend 可声明 `window.placement: pet-relative` 或 `pet-top-center` 与偏移量。`pet-top-center` 由宿主读取桌宠和 app 窗口实际外部尺寸，计算桌宠正上方的水平居中位置，并在桌宠移动或缩放时自动跟随。顶层 `agent.capabilities` 是 service 能力交集的工具注册候选。
 
 ## 配置隔离
 

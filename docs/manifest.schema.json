@@ -101,7 +101,7 @@
         "width": { "type": "integer", "minimum": 96, "maximum": 1920 },
         "height": { "type": "integer", "minimum": 48, "maximum": 1080 },
         "resizable": { "type": "boolean" },
-        "placement": { "const": "pet-relative" },
+        "placement": { "enum": ["pet-relative", "pet-top-center"] },
         "offsetX": { "type": "integer", "minimum": -1000, "maximum": 1000 },
         "offsetY": { "type": "integer", "minimum": -1000, "maximum": 1000 }
       }
