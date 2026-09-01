@@ -94,13 +94,15 @@ fn invoke(
     match capability {
         "clock.now" => {
             let value = snapshot(&state);
-            Ok((value.clone(), vec![notification("clock.updated", value)]))
+            let mut result = value.clone();
+            result["hostAction"] = json!({ "type": "window.open" });
+            Ok((result, vec![notification("clock.updated", value)]))
         }
         "clock.show" => {
             state.visible = true;
             let value = snapshot(&state);
             Ok((
-                json!({ "visible": true }),
+                json!({ "visible": true, "hostAction": { "type": "window.open" } }),
                 vec![
                     notification("clock.visibility", json!({ "visible": true })),
                     notification("clock.updated", value),
@@ -110,7 +112,7 @@ fn invoke(
         "clock.hide" => {
             state.visible = false;
             Ok((
-                json!({ "visible": false }),
+                json!({ "visible": false, "hostAction": { "type": "window.close" } }),
                 vec![notification(
                     "clock.visibility",
                     json!({ "visible": false }),
@@ -250,5 +252,18 @@ mod tests {
         .unwrap();
         assert_eq!(events[0]["params"]["name"], "clock.updated");
         assert!(!state.lock().unwrap().show_date);
+    }
+
+    #[test]
+    fn requests_window_actions_for_visibility_changes() {
+        let state = Arc::new(Mutex::new(ClockState {
+            hour12: false,
+            show_date: true,
+            visible: false,
+        }));
+        let (now, _) = invoke("clock.now", &json!({}), &state).unwrap();
+        assert_eq!(now["hostAction"]["type"], "window.open");
+        let (hide, _) = invoke("clock.hide", &json!({}), &state).unwrap();
+        assert_eq!(hide["hostAction"]["type"], "window.close");
     }
 }

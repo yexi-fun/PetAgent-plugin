@@ -46,6 +46,11 @@ onMounted(async () => {
   stop = () => window.removeEventListener("pet-app:event", handler);
   try {
     await rpc("app.events.subscribe");
+    const current = await rpc<ClockPayload>("app.invoke", {
+      capability: "clock.now",
+      input: {},
+    });
+    applyClock(current);
   } catch {
     available.value = false;
   }
