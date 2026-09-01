@@ -53,9 +53,12 @@ foreach ($archive in $archives) {
         permissions = @($manifest.permissions)
         dependencies = @($manifest.dependencies)
         conflicts = @($manifest.conflicts)
-        frontendProtocolVersion = if ($manifest.type -eq "frontend") { $manifest.entry.frontend.protocolVersion } else { $null }
-        frontendCapabilities = if ($manifest.type -eq "frontend") { @($manifest.entry.frontend.capabilities) } else { $emptyFrontendCapabilities }
-        frontendWindow = if ($manifest.type -eq "frontend") { $manifest.entry.frontend.window } else { $null }
+        frontendProtocolVersion = if ($manifest.type -in @("frontend", "app")) { $manifest.entry.frontend.protocolVersion } else { $null }
+        frontendCapabilities = if ($manifest.type -in @("frontend", "app")) { @($manifest.entry.frontend.capabilities) } else { $emptyFrontendCapabilities }
+        frontendWindow = if ($manifest.type -in @("frontend", "app")) { $manifest.entry.frontend.window } else { $null }
+        serviceProtocolVersion = if ($manifest.type -eq "app") { $manifest.entry.service.protocolVersion } else { $null }
+        agentCapabilities = if ($manifest.type -eq "app") { @($manifest.agent.capabilities) } else { @() }
+        targets = @($manifest.targets)
         versions = @([pscustomobject]@{
             version = $manifest.version
             channel = "stable"
@@ -88,12 +91,19 @@ foreach ($group in ($plugins | Group-Object -Property id)) {
         frontendProtocolVersion = $first.frontendProtocolVersion
         frontendCapabilities = $first.frontendCapabilities
         frontendWindow = $first.frontendWindow
+        serviceProtocolVersion = $first.serviceProtocolVersion
+        agentCapabilities = $first.agentCapabilities
+        targets = $first.targets
         versions = @($versions)
     }
-    if ($first.type -ne "frontend") {
+    if ($first.type -notin @("frontend", "app")) {
         $mergedPlugin.PSObject.Properties.Remove("frontendProtocolVersion")
         $mergedPlugin.PSObject.Properties.Remove("frontendCapabilities")
         $mergedPlugin.PSObject.Properties.Remove("frontendWindow")
+    }
+    if ($first.type -ne "app") {
+        $mergedPlugin.PSObject.Properties.Remove("serviceProtocolVersion")
+        $mergedPlugin.PSObject.Properties.Remove("agentCapabilities")
     }
     $mergedPlugins += $mergedPlugin
 }

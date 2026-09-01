@@ -2,17 +2,40 @@
   "schemaVersion": 1,
   "id": "com.petagent.clock",
   "name": "桌宠时钟",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "apiVersion": 1,
   "petAgent": ">=0.1.0, <0.2.0",
-  "type": "mcp",
+  "type": "app",
   "description": "查询当前本地时间，并在桌宠旁的独立气泡中显示。",
-  "entry": { "kind": "mcp", "config": "runtime/mcp.json" },
+  "entry": {
+    "kind": "app",
+    "service": {
+      "executable": "runtime/windows-x64/app-service.exe",
+      "protocolVersion": 1,
+      "startup": "on-demand"
+    },
+    "frontend": {
+      "root": "frontend",
+      "index": "frontend/dist/index.html",
+      "protocolVersion": 1,
+      "capabilities": ["host-info", "window.close", "window.state", "window.placement", "app.events"],
+      "window": {
+        "width": 220,
+        "height": 76,
+        "resizable": false,
+        "placement": "pet-relative",
+        "offsetX": 12,
+        "offsetY": 0
+      }
+    }
+  },
+  "agent": {
+    "capabilities": ["clock.now", "clock.show", "clock.hide", "clock.set_format"]
+  },
   "dependencies": [],
   "conflicts": [],
-  "permissions": [],
+  "permissions": ["window"],
   "targets": ["windows-x64"],
   "configSchema": "config.schema.json",
   "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
 }
-

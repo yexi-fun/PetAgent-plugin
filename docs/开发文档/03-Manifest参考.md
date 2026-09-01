@@ -12,7 +12,7 @@
 | `version` | 是 | SemVer，例如 `0.1.0`。 |
 | `apiVersion` | 是 | 当前固定为 `1`。 |
 | `petAgent` | 是 | 宿主版本范围，例如 `>=0.1.0 <0.2.0`。 |
-| `type` | 是 | `mcp`、`sidecar`、`provider`、`native-dll` 或 `frontend`。 |
+| `type` | 是 | `mcp`、`sidecar`、`provider`、`native-dll`、`frontend` 或 `app`。 |
 | `description` | 是 | 1–500 字符的功能说明。 |
 | `entry` | 是 | 入口对象，`entry.kind` 必须与 `type` 相同。 |
 | `dependencies` | 否 | `{ "id": "...", "version": "..." }` 数组。缺失依赖会拒绝安装。 |
@@ -39,6 +39,8 @@
 frontend 还可选声明 `protocolVersion`（当前为 `1`）、`capabilities`（`host-info`、`config.read`、`config.write`、`window.close`、`window.state`、`notifications`、`lifecycle-events`）和受宿主边界限制的 `window` 尺寸参数。能力白名单决定可调用的 frontend RPC；`permissions` 仍是可信代码模型下的说明标签，不是沙箱 ACL。
 
 所有路径必须是相对路径，不能包含 `..`、反斜杠、盘符或前导 `/`。运行时还会检查解析后的路径没有逃出插件版本目录。
+
+`app` 必须同时声明 `entry.service` 与 `entry.frontend`。service 使用包内相对 `.exe`、`protocolVersion: 1` 和 `startup: on-demand|enabled`；frontend 可声明 `window.placement: pet-relative` 与偏移量。顶层 `agent.capabilities` 是 service 能力交集的工具注册候选。
 
 ## 配置隔离
 

@@ -1,9 +1,18 @@
-use chrono::Local;
+use chrono::{Local, SecondsFormat};
 use serde_json::{json, Value};
 use std::io::{self, BufRead, Write};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
-const TOOL_NAME: &str = "clock_now";
 const MAX_LINE_BYTES: usize = 1024 * 1024;
+
+#[derive(Clone)]
+struct ClockState {
+    hour12: bool,
+    show_date: bool,
+    visible: bool,
+}
 
 fn response(id: &Value, result: Value) -> Value {
     json!({ "jsonrpc": "2.0", "id": id, "result": result })
@@ -13,63 +22,144 @@ fn error(id: &Value, code: i64, message: &str) -> Value {
     json!({ "jsonrpc": "2.0", "id": id, "error": { "code": code, "message": message } })
 }
 
-fn descriptor() -> Value {
-    json!({
-        "name": TOOL_NAME,
-        "description": "获取当前本地时间，并在桌宠旁的独立气泡中显示。",
-        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
-    })
-}
-
-fn now() -> Value {
-    let formatted = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    json!({
-        "now": formatted,
-        "timezone": Local::now().offset().to_string(),
-        "bubble": { "text": format!("现在时间：{formatted}") }
-    })
-}
-
-fn handle(request: &Value) -> Value {
-    let id = request.get("id").cloned().unwrap_or(Value::Null);
-    if request.get("jsonrpc").and_then(Value::as_str) != Some("2.0") {
-        return error(&id, -32600, "invalid JSON-RPC version");
-    }
-    let method = request
-        .get("method")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
-    let params = request.get("params").cloned().unwrap_or(Value::Null);
-    match method {
-        "initialize" => response(
-            &id,
-            json!({ "protocolVersion": "2026-01-01", "capabilities": { "tools": {} }, "serverInfo": { "name": "petagent-clock-mcp", "version": env!("CARGO_PKG_VERSION") } }),
-        ),
-        "health" => response(&id, json!({ "ok": true, "message": "ready" })),
-        "capabilities" | "tools/list" => response(
-            &id,
-            json!({ "capabilities": [descriptor()], "tools": [descriptor()] }),
-        ),
-        "tools/call" => {
-            if params.get("name").and_then(Value::as_str) != Some(TOOL_NAME) {
-                return error(&id, -32602, "unknown tool");
-            }
-            let text = serde_json::to_string(&now())
-                .unwrap_or_else(|_| "{\"error\":\"serialize failed\"}".into());
-            response(
-                &id,
-                json!({ "content": [{ "type": "text", "text": text }], "isError": false }),
-            )
+fn capabilities() -> Value {
+    json!({ "capabilities": [
+        {
+            "name": "clock.now",
+            "description": "返回系统本地时间。",
+            "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+            "events": ["clock.updated"]
+        },
+        {
+            "name": "clock.show",
+            "description": "显示独立时间窗口。",
+            "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+            "events": ["clock.visibility", "clock.updated"]
+        },
+        {
+            "name": "clock.hide",
+            "description": "隐藏独立时间窗口。",
+            "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+            "events": ["clock.visibility"]
+        },
+        {
+            "name": "clock.set_format",
+            "description": "设置 12/24 小时制和日期显示。",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "hour12": { "type": "boolean" }, "showDate": { "type": "boolean" } },
+                "additionalProperties": false
+            },
+            "events": ["clock.updated"]
         }
-        "shutdown" => response(&id, Value::Null),
-        _ => error(&id, -32601, "method not found"),
+    ]})
+}
+
+fn snapshot(state: &ClockState) -> Value {
+    let now = Local::now();
+    let time_format = if state.hour12 {
+        "%I:%M:%S %p"
+    } else {
+        "%H:%M:%S"
+    };
+    json!({
+        "text": now.format(time_format).to_string(),
+        "date": state.show_date.then(|| now.format("%Y-%m-%d").to_string()),
+        "iso": now.to_rfc3339_opts(SecondsFormat::Secs, true),
+        "timezone": now.offset().to_string(),
+        "source": "windows-system-clock"
+    })
+}
+
+fn notification(name: &str, payload: Value) -> Value {
+    json!({ "jsonrpc": "2.0", "method": "pet.app.event", "params": { "name": name, "payload": payload } })
+}
+
+fn write_message(stdout: &Arc<Mutex<io::Stdout>>, value: &Value) -> bool {
+    let mut stdout = stdout
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    serde_json::to_writer(&mut *stdout, value).is_ok()
+        && stdout.write_all(b"\n").and_then(|_| stdout.flush()).is_ok()
+}
+
+fn invoke(
+    capability: &str,
+    input: &Value,
+    state: &Arc<Mutex<ClockState>>,
+) -> Result<(Value, Vec<Value>), &'static str> {
+    let mut state = state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    match capability {
+        "clock.now" => {
+            let value = snapshot(&state);
+            Ok((value.clone(), vec![notification("clock.updated", value)]))
+        }
+        "clock.show" => {
+            state.visible = true;
+            let value = snapshot(&state);
+            Ok((
+                json!({ "visible": true }),
+                vec![
+                    notification("clock.visibility", json!({ "visible": true })),
+                    notification("clock.updated", value),
+                ],
+            ))
+        }
+        "clock.hide" => {
+            state.visible = false;
+            Ok((
+                json!({ "visible": false }),
+                vec![notification(
+                    "clock.visibility",
+                    json!({ "visible": false }),
+                )],
+            ))
+        }
+        "clock.set_format" => {
+            if let Some(hour12) = input.get("hour12").and_then(Value::as_bool) {
+                state.hour12 = hour12;
+            }
+            if let Some(show_date) = input.get("showDate").and_then(Value::as_bool) {
+                state.show_date = show_date;
+            }
+            let value = snapshot(&state);
+            Ok((
+                json!({ "hour12": state.hour12, "showDate": state.show_date }),
+                vec![notification("clock.updated", value)],
+            ))
+        }
+        _ => Err("unknown capability"),
     }
 }
 
 fn main() {
-    let stdin = io::stdin();
-    let mut stdout = io::stdout();
-    for line in stdin.lock().lines() {
+    let state = Arc::new(Mutex::new(ClockState {
+        hour12: false,
+        show_date: true,
+        visible: false,
+    }));
+    let stdout = Arc::new(Mutex::new(io::stdout()));
+    let ticker_state = state.clone();
+    let ticker_stdout = stdout.clone();
+    thread::spawn(move || loop {
+        thread::sleep(Duration::from_secs(1));
+        let state = ticker_state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone();
+        if state.visible
+            && !write_message(
+                &ticker_stdout,
+                &notification("clock.updated", snapshot(&state)),
+            )
+        {
+            break;
+        }
+    });
+
+    for line in io::stdin().lock().lines() {
         let Ok(line) = line else { break };
         if line.len() > MAX_LINE_BYTES {
             break;
@@ -77,16 +167,50 @@ fn main() {
         let Ok(request) = serde_json::from_str::<Value>(&line) else {
             continue;
         };
-        let shutdown = request.get("method").and_then(Value::as_str) == Some("shutdown");
-        if serde_json::to_writer(&mut stdout, &handle(&request)).is_err() {
+        let id = request.get("id").cloned().unwrap_or(Value::Null);
+        let method = request
+            .get("method")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let params = request.get("params").cloned().unwrap_or(Value::Null);
+        let (reply, events, shutdown) = match method {
+            "initialize" => (
+                response(
+                    &id,
+                    json!({ "appProtocolVersion": 1, "serviceVersion": env!("CARGO_PKG_VERSION") }),
+                ),
+                Vec::new(),
+                false,
+            ),
+            "health" => (
+                response(&id, json!({ "ok": true, "message": "ready" })),
+                Vec::new(),
+                false,
+            ),
+            "capabilities" => (response(&id, capabilities()), Vec::new(), false),
+            "invoke" => match invoke(
+                params
+                    .get("capability")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default(),
+                params.get("input").unwrap_or(&Value::Null),
+                &state,
+            ) {
+                Ok((result, events)) => (response(&id, result), events, false),
+                Err(message) => (error(&id, -32602, message), Vec::new(), false),
+            },
+            "shutdown" => (response(&id, json!({ "ok": true })), Vec::new(), true),
+            _ => (error(&id, -32601, "method not found"), Vec::new(), false),
+        };
+        if !write_message(&stdout, &reply) {
             break;
         }
-        if stdout
-            .write_all(b"\n")
-            .and_then(|_| stdout.flush())
-            .is_err()
-            || shutdown
-        {
+        for event in events {
+            if !write_message(&stdout, &event) {
+                return;
+            }
+        }
+        if shutdown {
             break;
         }
     }
@@ -97,24 +221,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn advertises_clock_and_bubble_contract() {
-        let value = descriptor();
-        assert_eq!(value["name"], TOOL_NAME);
-        assert!(value["description"].as_str().unwrap().contains("气泡"));
-    }
-
-    #[test]
-    fn returns_local_time_payload() {
-        let value = now();
-        assert!(value["now"].as_str().is_some_and(|text| text.len() == 19));
-        assert!(value["bubble"]["text"].as_str().is_some());
-    }
-
-    #[test]
-    fn handles_tool_call() {
-        let output = handle(
-            &json!({ "jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": { "name": TOOL_NAME, "arguments": {} } }),
+    fn advertises_all_declared_capabilities() {
+        let value = capabilities();
+        let names = value["capabilities"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|item| item["name"].as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            names,
+            ["clock.now", "clock.show", "clock.hide", "clock.set_format"]
         );
-        assert_eq!(output["result"]["isError"], false);
+    }
+
+    #[test]
+    fn uses_system_clock_and_updates_format() {
+        let state = Arc::new(Mutex::new(ClockState {
+            hour12: false,
+            show_date: true,
+            visible: false,
+        }));
+        let (_, events) = invoke(
+            "clock.set_format",
+            &json!({ "hour12": true, "showDate": false }),
+            &state,
+        )
+        .unwrap();
+        assert_eq!(events[0]["params"]["name"], "clock.updated");
+        assert!(!state.lock().unwrap().show_date);
     }
 }

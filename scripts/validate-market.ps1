@@ -30,7 +30,20 @@ foreach ($manifestPath in Get-ChildItem -LiteralPath (Join-Path $root "plugins")
     if ($manifest.type -eq "native-dll") {
         if ($manifest.entry.library -notmatch '\.dll$' -or $manifest.entry.abiVersion -ne 1 -or $manifest.entry.serviceName -ne "tools" -or $manifest.entry.serviceApiVersion -ne 1) { throw "Invalid native ABI entry: $($manifest.id)" }
     }
-    if ($manifest.type -eq "frontend") {
+    if ($manifest.type -eq "app") {
+        if (-not $manifest.entry.service.executable -or $manifest.entry.service.protocolVersion -ne 1) { throw "Invalid app service entry: $($manifest.id)" }
+        if ($manifest.entry.service.executable -notmatch '\.exe$') { throw "App service must be an EXE: $($manifest.id)" }
+        if (-not $manifest.entry.frontend.root -or -not $manifest.entry.frontend.index -or $manifest.entry.frontend.index -notlike "$($manifest.entry.frontend.root)/*") { throw "Invalid app frontend entry: $($manifest.id)" }
+        if ($manifest.entry.frontend.protocolVersion -ne 1) { throw "Unsupported app frontend protocol version: $($manifest.id)" }
+        if (@($manifest.agent.capabilities).Count -eq 0) { throw "App must declare agent capabilities: $($manifest.id)" }
+        $supportedCapabilities = @("host-info", "window.close", "window.state", "window.placement", "app.events", "app.invoke")
+        foreach ($capability in @($manifest.entry.frontend.capabilities)) {
+            if ($supportedCapabilities -notcontains $capability) { throw "Unsupported app frontend capability in $($manifest.id): $capability" }
+        }
+        foreach ($capability in @($manifest.agent.capabilities)) {
+            if ($capability -notmatch '^[a-z0-9]+[a-z0-9._-]*\.[a-z0-9._-]+$') { throw "Invalid app capability in $($manifest.id): $capability" }
+        }
+    } elseif ($manifest.type -eq "frontend") {
         if (-not $manifest.entry.frontend.root -or -not $manifest.entry.frontend.index -or $manifest.entry.frontend.index -notlike "$($manifest.entry.frontend.root)/*") { throw "Invalid frontend entry: $($manifest.id)" }
         if ($manifest.entry.frontend.protocolVersion -and $manifest.entry.frontend.protocolVersion -ne 1) { throw "Unsupported frontend protocol version: $($manifest.id)" }
         $supportedCapabilities = @("host-info", "config.read", "config.write", "window.close", "window.state", "notifications", "lifecycle-events")
@@ -75,6 +88,9 @@ foreach ($archive in Get-ChildItem -LiteralPath (Join-Path $root "artifacts") -R
     $zip = [IO.Compression.ZipFile]::OpenRead($archive.FullName)
     try {
         foreach ($entry in $zip.Entries) {
+            if ($entry.FullName -match '(^|/)node_modules(/|$)' -or $entry.FullName -match '(^|/)(\.env|.*secret.*)(/|$)') {
+                throw "Forbidden ZIP content: $($entry.FullName)"
+            }
             if ([IO.Path]::IsPathRooted($entry.FullName) -or $entry.FullName -match '(^|/)\.\.(/|$)' -or $entry.FullName -match '\\') {
                 throw "Unsafe ZIP path: $($entry.FullName)"
             }

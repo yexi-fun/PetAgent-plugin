@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/yexi-fun/PetAgent/market/manifest.schema.json",
+  "$id": "https://github.com/yexi-fun/PetAgent-plugin/market/manifest.schema.json",
   "title": "PetAgent Plugin Manifest",
   "type": "object",
   "additionalProperties": false,
@@ -12,14 +12,14 @@
     "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$" },
     "apiVersion": { "const": 1 },
     "petAgent": { "type": "string", "minLength": 1 },
-    "type": { "enum": ["mcp", "sidecar", "provider", "native-dll", "frontend"] },
+    "type": { "enum": ["mcp", "sidecar", "provider", "native-dll", "frontend", "app"] },
     "description": { "type": "string", "minLength": 1, "maxLength": 500 },
     "entry": {
       "type": "object",
       "additionalProperties": false,
       "required": ["kind"],
       "properties": {
-        "kind": { "enum": ["mcp", "sidecar", "provider", "native-dll", "frontend"] },
+        "kind": { "enum": ["mcp", "sidecar", "provider", "native-dll", "frontend", "app"] },
         "config": { "$ref": "#/$defs/relativePath" },
         "executable": { "$ref": "#/$defs/relativePath" },
         "library": { "$ref": "#/$defs/relativePath" },
@@ -30,13 +30,18 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["root", "index"],
-          "properties": {
-            "root": { "$ref": "#/$defs/relativePath" },
-            "index": { "$ref": "#/$defs/relativePath" }
-          }
-        }
+            "properties": {
+              "root": { "$ref": "#/$defs/relativePath" },
+            "index": { "$ref": "#/$defs/relativePath" },
+            "protocolVersion": { "const": 1 },
+            "capabilities": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+            "window": { "$ref": "#/$defs/window" }
+            }
+        },
+        "service": { "$ref": "#/$defs/appService" }
       }
     },
+    "agent": { "type": "object", "additionalProperties": false, "properties": { "capabilities": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9]+[a-z0-9._-]*\\.[a-z0-9._-]+$" } } } },
     "dependencies": { "type": "array", "uniqueItems": true, "items": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "type": "string" }, "version": { "type": "string" } } } },
     "conflicts": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
     "permissions": { "type": "array", "uniqueItems": true, "items": { "enum": ["network", "filesystem-read", "filesystem-write", "shell", "model", "window", "microphone"] } },
@@ -65,9 +70,41 @@
     {
       "if": { "properties": { "type": { "const": "frontend" } } },
       "then": { "properties": { "entry": { "required": ["frontend"] } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "app" } } },
+      "then": {
+        "required": ["agent"],
+        "properties": {
+          "entry": { "required": ["service", "frontend"] }
+        }
+      }
     }
   ],
   "$defs": {
-    "relativePath": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$" }
+    "relativePath": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$" },
+    "appService": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executable", "protocolVersion"],
+      "properties": {
+        "executable": { "$ref": "#/$defs/relativePath" },
+        "protocolVersion": { "const": 1 },
+        "startup": { "enum": ["on-demand", "enabled"] }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "width": { "type": "integer", "minimum": 96, "maximum": 1920 },
+        "height": { "type": "integer", "minimum": 48, "maximum": 1080 },
+        "resizable": { "type": "boolean" },
+        "placement": { "const": "pet-relative" },
+        "offsetX": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+        "offsetY": { "type": "integer", "minimum": -1000, "maximum": 1000 }
+      }
+    }
   }
 }

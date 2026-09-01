@@ -40,6 +40,36 @@ if ($manifest.type -eq "mcp") {
     Copy-Item -LiteralPath $binary -Destination (Join-Path $payload "runtime\windows-x64") -Force
 } elseif ($manifest.type -eq "frontend") {
     Copy-Item -LiteralPath (Join-Path $pluginRoot "dist") -Destination $payload -Recurse -Force
+} elseif ($manifest.type -eq "app") {
+    $service = [string]$manifest.entry.service.executable
+    $frontendRoot = Join-Path $pluginRoot "frontend"
+    if (-not $service -or [IO.Path]::IsPathRooted($service) -or $service.Contains('\') -or $service -match '(^|/)[.][.](/|$)' -or [IO.Path]::GetExtension($service) -ne ".exe") {
+        throw "App entry.service.executable must be a safe relative .exe path."
+    }
+    Push-Location $frontendRoot
+    try {
+        npm install --ignore-scripts
+        if ($LASTEXITCODE -ne 0) { throw "Failed to install app frontend dependencies for $PluginId." }
+        npm run build
+        if ($LASTEXITCODE -ne 0) { throw "Failed to build app frontend for $PluginId." }
+    } finally { Pop-Location }
+    Push-Location (Join-Path $pluginRoot "src")
+    try {
+        cargo build --release --target x86_64-pc-windows-msvc
+        if ($LASTEXITCODE -ne 0) { throw "Failed to build app service for $PluginId." }
+        $cargoMetadata = cargo metadata --no-deps --format-version 1 | ConvertFrom-Json
+    } finally { Pop-Location }
+    $bins = @($cargoMetadata.packages.targets | Where-Object { @($_.kind) -contains "bin" })
+    if ($bins.Count -ne 1) { throw "App packaging requires exactly one Cargo binary target." }
+    $built = Join-Path ([string]$cargoMetadata.target_directory) "x86_64-pc-windows-msvc\release\$($bins[0].name).exe"
+    if (-not (Test-Path $built)) { throw "Missing app service binary: $built" }
+    $payloadService = Join-Path $payload ($service -replace '/', '\')
+    New-Item -ItemType Directory -Force (Split-Path -Parent $payloadService) | Out-Null
+    Copy-Item -LiteralPath $built -Destination $payloadService -Force
+    $frontendIndex = Join-Path $frontendRoot "dist\index.html"
+    if (-not (Test-Path $frontendIndex)) { throw "Missing app frontend index: $frontendIndex" }
+    New-Item -ItemType Directory -Force (Join-Path $payload "frontend") | Out-Null
+    Copy-Item -LiteralPath (Join-Path $frontendRoot "dist") -Destination (Join-Path $payload "frontend") -Recurse -Force
 } elseif ($manifest.type -eq "native-dll") {
     $library = [string]$manifest.entry.library
     if (-not $library -or [IO.Path]::IsPathRooted($library) -or $library.Contains('\') -or $library -match '(^|/)\.\.(/|$)' -or [IO.Path]::GetExtension($library) -ne ".dll") {
