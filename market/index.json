@@ -2,7 +2,7 @@
     "index":  {
                   "schemaVersion":  1,
                   "repository":  "yexi-fun/PetAgent-plugin",
-                  "generatedAt":  "2026-09-01T15:46:58.3849588Z",
+                  "generatedAt":  "2026-09-01T16:17:14.3718289Z",
                   "plugins":  [
                                   {
                                       "id":  "com.example.echo",
@@ -139,9 +139,10 @@
                                       "frontendProtocolVersion":  1,
                                       "frontendCapabilities":  [
                                                                    "host-info",
-                                                                   "window.close",
-                                                                   "window.state",
-                                                                   "window.placement",
+                                 "window.close",
+                                 "window.state",
+                                 "window.ready",
+                                 "window.placement",
                                                                    "app.events",
                                                                    "app.invoke"
                                                                ],
@@ -165,11 +166,11 @@
                                                   ],
                                       "versions":  [
                                                        {
-                                                           "version":  "0.2.2",
+                                                           "version":  "0.2.3",
                                                            "channel":  "stable",
-                                                           "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v2/com.petagent.clock-0.2.2.zip",
-                                                           "sha256":  "cde972b347b5114ab41b6f438456202ac6f72d8818930a856dc8afe8b271d2f2",
-                                                           "publishedAt":  "2026-09-01T15:46:58.3849588Z",
+                                                           "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v2/com.petagent.clock-0.2.3.zip",
+                                                           "sha256":  "de72f142c671689af5486ca8d5c6144e1e90d7d8e251ab651885143683e66d90",
+                                                           "publishedAt":  "2026-09-01T16:17:14.3718289Z",
                                                            "revoked":  false
                                                        }
                                                    ]
