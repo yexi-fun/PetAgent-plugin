@@ -2,7 +2,7 @@
     "index":  {
                   "schemaVersion":  1,
                   "repository":  "yexi-fun/PetAgent-plugin",
-                  "generatedAt":  "2026-09-01T16:17:14.3718289Z",
+                  "generatedAt":  "2026-09-01T16:37:19.2065601Z",
                   "plugins":  [
                                   {
                                       "id":  "com.example.echo",
@@ -139,10 +139,10 @@
                                       "frontendProtocolVersion":  1,
                                       "frontendCapabilities":  [
                                                                    "host-info",
-                                 "window.close",
-                                 "window.state",
-                                 "window.ready",
-                                 "window.placement",
+                                                                   "window.close",
+                                                                   "window.state",
+                                                                   "window.ready",
+                                                                   "window.placement",
                                                                    "app.events",
                                                                    "app.invoke"
                                                                ],
@@ -151,8 +151,8 @@
                                                              "height":  76,
                                                              "resizable":  false,
                                                              "placement":  "pet-top-center",
-                                                             "offsetX":  0,
-                                                             "offsetY":  -8
+                                                             "offsetX":  12,
+                                                             "offsetY":  0
                                                          },
                                       "serviceProtocolVersion":  1,
                                       "agentCapabilities":  [
@@ -166,11 +166,11 @@
                                                   ],
                                       "versions":  [
                                                        {
-                                                           "version":  "0.2.3",
+                                                           "version":  "0.2.5",
                                                            "channel":  "stable",
-                                                           "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v2/com.petagent.clock-0.2.3.zip",
-                                                           "sha256":  "de72f142c671689af5486ca8d5c6144e1e90d7d8e251ab651885143683e66d90",
-                                                           "publishedAt":  "2026-09-01T16:17:14.3718289Z",
+                                                           "downloadUrl":  "https://github.com/yexi-fun/PetAgent-plugin/releases/download/market-v2/com.petagent.clock-0.2.5.zip",
+                                                           "sha256":  "b5051e3e7d46851fe3e703bafa8e5eaa06e131c4310917421eec3e7958f0d58c",
+                                                           "publishedAt":  "2026-09-01T16:37:19.2044283Z",
                                                            "revoked":  false
                                                        }
                                                    ]
