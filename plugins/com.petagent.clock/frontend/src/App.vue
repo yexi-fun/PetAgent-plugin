@@ -34,6 +34,14 @@ function applyClock(payload: ClockPayload) {
   available.value = true;
 }
 
+async function closeWindow() {
+  try {
+    await rpc("window.close");
+  } catch {
+    // Keep the clock visible when the host cannot close the window.
+  }
+}
+
 onMounted(async () => {
   const handler = (event: Event) => {
     const detail = (event as CustomEvent<{ name?: string; payload?: ClockPayload }>).detail;
@@ -67,6 +75,7 @@ onBeforeUnmount(() => stop?.());
 
 <template>
   <main class="clock" :class="{ unavailable: !available }">
+    <button class="close" type="button" aria-label="关闭窗口" title="关闭窗口" @click="closeWindow">×</button>
     <div class="time">{{ time }}</div>
     <div class="meta">
       <span v-if="date">{{ date }}</span>

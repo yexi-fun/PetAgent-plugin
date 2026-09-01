@@ -9,6 +9,7 @@
 html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 
 .clock {
+  position: relative;
   width: 100%;
   height: 100%;
   display: grid;
@@ -18,6 +19,28 @@ html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; }
   border-radius: 8px;
   background: rgba(31, 35, 41, 0.92);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+}
+
+.close {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: #c7d0da;
+  background: transparent;
+  font: 18px/18px "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus-visible {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  outline: none;
 }
 
 .time { font-size: 25px; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }

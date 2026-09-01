@@ -92,6 +92,8 @@ y = pet.y - app.height + offsetY
 
 APP 窗口创建后默认隐藏。页面完成自身初始化（例如订阅事件、加载首屏数据）后，应调用 `window.ready`；宿主只显示发起该 RPC 的 APP session。未声明 `window.ready` 或未调用该方法的 APP 窗口会保持隐藏，避免页面加载期间出现白色或空白闪屏。
 
+由于 APP 窗口通常使用无边框模式且不会显示任务栏按钮，frontend 应提供清晰的窗口内关闭按钮，并调用 `window.close` 关闭当前窗口。该操作只关闭窗口，不会停用 APP service；再次由 Agent 或宿主触发打开时可以复用同一 service。
+
 `placement` 省略时不保证相对桌宠定位。`pet-relative` 和 `pet-top-center` 仅适用于 `type: app`，其他插件类型使用这些值会被 manifest 校验拒绝。
 
 ## 配置隔离

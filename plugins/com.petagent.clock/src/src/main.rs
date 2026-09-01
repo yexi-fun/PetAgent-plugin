@@ -93,6 +93,7 @@ fn invoke(
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     match capability {
         "clock.now" => {
+            state.visible = true;
             let value = snapshot(&state);
             let mut result = value.clone();
             result["hostAction"] = json!({ "type": "window.open" });
@@ -263,6 +264,7 @@ mod tests {
         }));
         let (now, _) = invoke("clock.now", &json!({}), &state).unwrap();
         assert_eq!(now["hostAction"]["type"], "window.open");
+        assert!(state.lock().unwrap().visible);
         let (hide, _) = invoke("clock.hide", &json!({}), &state).unwrap();
         assert_eq!(hide["hostAction"]["type"], "window.close");
     }
