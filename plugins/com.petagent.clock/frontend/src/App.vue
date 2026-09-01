@@ -53,6 +53,12 @@ onMounted(async () => {
     applyClock(current);
   } catch {
     available.value = false;
+  } finally {
+    try {
+      await rpc("window.ready");
+    } catch {
+      // Keep rendering even when the host cannot promote the window.
+    }
   }
 });
 

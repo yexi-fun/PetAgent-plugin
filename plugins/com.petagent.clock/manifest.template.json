@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "com.petagent.clock",
   "name": "桌宠时钟",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "apiVersion": 1,
   "petAgent": ">=0.1.0, <0.2.0",
   "type": "app",
@@ -18,7 +18,7 @@
       "root": "frontend",
       "index": "frontend/dist/index.html",
       "protocolVersion": 1,
-      "capabilities": ["host-info", "window.close", "window.state", "window.placement", "app.events", "app.invoke"],
+      "capabilities": ["host-info", "window.close", "window.state", "window.ready", "window.placement", "app.events", "app.invoke"],
       "window": {
         "width": 220,
         "height": 76,

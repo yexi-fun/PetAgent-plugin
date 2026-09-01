@@ -36,7 +36,7 @@ foreach ($manifestPath in Get-ChildItem -LiteralPath (Join-Path $root "plugins")
         if (-not $manifest.entry.frontend.root -or -not $manifest.entry.frontend.index -or $manifest.entry.frontend.index -notlike "$($manifest.entry.frontend.root)/*") { throw "Invalid app frontend entry: $($manifest.id)" }
         if ($manifest.entry.frontend.protocolVersion -ne 1) { throw "Unsupported app frontend protocol version: $($manifest.id)" }
         if (@($manifest.agent.capabilities).Count -eq 0) { throw "App must declare agent capabilities: $($manifest.id)" }
-        $supportedCapabilities = @("host-info", "window.close", "window.state", "window.placement", "app.events", "app.invoke")
+        $supportedCapabilities = @("host-info", "window.close", "window.state", "window.ready", "window.placement", "app.events", "app.invoke")
         foreach ($capability in @($manifest.entry.frontend.capabilities)) {
             if ($supportedCapabilities -notcontains $capability) { throw "Unsupported app frontend capability in $($manifest.id): $capability" }
         }
